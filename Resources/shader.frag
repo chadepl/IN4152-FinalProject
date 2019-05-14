@@ -21,5 +21,5 @@ void main()
         color = texture(colorMap, passTexCoord).rgb;
 
     // Output color value, change from (1, 0, 0) to something else
-    fragColor = vec4(1, 0, 0, 1);
+    fragColor = vec4(0, 0, 0, 1);
 }
