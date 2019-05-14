@@ -14,6 +14,7 @@ include_directories(${CMAKE_SOURCE_DIR}/3rdParty/Includes/)
 # Set the source directory as an include folder for relative includes
 include_directories(${CMAKE_SOURCE_DIR}/Source)
 
+
 IF (APPLE)
 #link_directories(/usr/local/lib)
 ENDIF()
@@ -26,6 +27,7 @@ add_executable(${PROJECT}
     ${SOURCE_FILES}
 )
 
+
 # Specify the libraries to use when linking the executable
 IF (WIN32)
 target_link_libraries (${PROJECT} ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/Libraries/glfw3.lib)
@@ -35,6 +37,11 @@ IF (APPLE)
 target_link_libraries (${PROJECT} /usr/local/lib/libglfw.3.3.dylib)
 target_link_libraries (${PROJECT} ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/Libraries/GDT/$<CONFIG>/libGDT.a)
 ENDIF()
+
+
+set(EXTERN_INCLUDES
+    ${CMAKE_CURRENT_SOURCE_DIR}/glm
+    CACHE INTERNAL "" FORCE)
 
 add_custom_command(TARGET ${PROJECT} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
