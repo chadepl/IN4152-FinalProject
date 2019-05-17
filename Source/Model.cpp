@@ -163,8 +163,6 @@ Model loadMap(int width, int depth, int resolution)
             float pos1z = j * stepZ;
             float pos2z = (j + 1) * stepZ;
             
-            float height = sin((pos1x+pos2x)/2) * sin((pos1z+pos2z)/2);
-            
             float height11 = sin(pos1x) * sin(pos1z);
             Vector3f point11 = Vector3f(pos1x, height11, pos1z);
             
@@ -177,20 +175,29 @@ Model loadMap(int width, int depth, int resolution)
             float height22 = sin(pos2x) * sin(pos2z);
             Vector3f point22 = Vector3f(pos2x, height22, pos2z);
             
+            Vector3f U, V;
             
             // First triangle
             model.vertices.push_back(point11);
             model.vertices.push_back(point21);
-            model.vertices.push_back(point12);
+            model.vertices.push_back(point22);
             
-            model.normals.push_back(cross(point11, point21));
+            U = point21 - point11;
+            V = point22 - point21;
+            
+            model.normals.push_back(cross(U, V));
+            Vector3f normal = cross(U, V);
+            std::cout << "Length: " << normal.length() << std::endl;
             
             // Complementary triangle
-            model.vertices.push_back(point21);
+            model.vertices.push_back(point11);
             model.vertices.push_back(point22);
             model.vertices.push_back(point12);
             
-            model.normals.push_back(cross(point22, point12));
+            U = point12 - point22;
+            V = point11 - point12;
+            
+            model.normals.push_back(cross(U, V));
         }
     }
     
@@ -205,12 +212,12 @@ Model loadMap(int width, int depth, int resolution)
     glBufferData(GL_ARRAY_BUFFER, model.vertices.size() * sizeof(Vector3f), model.vertices.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
-//    GLuint nbo;
-//    glGenBuffers(1, &nbo);
-//    glBindBuffer(GL_ARRAY_BUFFER, nbo);
-//    glBufferData(GL_ARRAY_BUFFER, model.normals.size() * sizeof(Vector3f), model.normals.data(), GL_STATIC_DRAW);
-//    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-//    glEnableVertexAttribArray(1);
+    GLuint nbo;
+    glGenBuffers(1, &nbo);
+    glBindBuffer(GL_ARRAY_BUFFER, nbo);
+    glBufferData(GL_ARRAY_BUFFER, model.normals.size() * sizeof(Vector3f), model.normals.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
     if (model.texCoords.size() > 0)
     {
         GLuint tbo;
