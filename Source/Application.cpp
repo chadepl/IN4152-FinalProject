@@ -15,6 +15,60 @@
 #include <vector>
 #include <iostream>
 
+// Produces a projection matrix for perspective projection
+// http://www.songho.ca/opengl/gl_projectionmatrix.html
+Matrix4f projectionProjectiveMatrix(float near, float far, float left, float right, float top, float bottom){
+    
+    Matrix4f projectionMatrix;
+    
+    projectionMatrix[0] = 2*near/(right-left);
+    projectionMatrix[5] = 2*near/(top-bottom);
+    projectionMatrix[8] = (right+left)/(right-left);
+    projectionMatrix[9] = (top+bottom)/(top-bottom);
+    projectionMatrix[10] = -(far+near)/far-near;
+    projectionMatrix[11] = -1;
+    projectionMatrix[14] = -2*far*near/(far-near);
+    projectionMatrix[15] = 0;
+    
+    return projectionMatrix;
+}
+
+Matrix4f projectionOrthographicMatric(float near, float far, float left, float right, float top, float bottom){
+    
+    Matrix4f projectionMatrix;
+    
+    projectionMatrix[0] = 2/(right-left);
+    projectionMatrix[5] = 2/(top-bottom);
+    projectionMatrix[10] = -2/(far-near);
+    projectionMatrix[12] = -(right+left)/(right-left);
+    projectionMatrix[13] = -(top+bottom)/(top-bottom);
+    projectionMatrix[14] = -(far+near)/(far-near);
+    
+    return projectionMatrix;
+    
+}
+
+
+// Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
+Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up)
+{
+    Vector3f forward = normalize(target - camera);
+    Vector3f right = normalize(cross(forward, up));
+    up = cross(right, forward);
+    
+    Matrix4f lookAtMatrix;
+    lookAtMatrix[0] = right.x; lookAtMatrix[4] = right.y; lookAtMatrix[8] = right.z;
+    lookAtMatrix[1] = up.x; lookAtMatrix[5] = up.y; lookAtMatrix[9] = up.z;
+    lookAtMatrix[2] = -forward.x; lookAtMatrix[6] = -forward.y; lookAtMatrix[10] = -forward.z;
+    
+    Matrix4f translateMatrix;
+    translateMatrix[12] = -camera.x;
+    translateMatrix[13] = -camera.y;
+    translateMatrix[14] = -camera.z;
+    
+    return lookAtMatrix * translateMatrix;
+}
+
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
 // Just make sure you let the shader know whether the model has texture coordinates
 void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f rotation = Vector3f(0), float scale = 1)
@@ -22,20 +76,17 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     Matrix4f modelMatrix;
     modelMatrix.translate(position);
     modelMatrix.rotate(rotation);
-
     modelMatrix.scale(scale);
-
-	Matrix4f viewMatrix, projMatrix;
 
     shader.uniformMatrix4f("modelMatrix", modelMatrix);
     shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
-	glm::mat4 View = glm::lookAt(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
-	//glUniformMatrix4fv(1, 1, GL_FALSE, &View[0][0]);
-	shader.uniformMatrix4f("viewMatrix", viewMatrix);
 
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
+    
 }
+
+
 
 class Application : KeyListener, MouseMoveListener, MouseClickListener
 {
@@ -46,7 +97,8 @@ public:
         window.create("Final Project", 1024, 1024);
 
 		//Load cube model
-		model = loadModel("Resources/cube_normals.obj");
+//        model = loadModel("Resources/cube_normals.obj");
+        map = loadMap(1, 1, 10);
 
         window.addKeyListener(this);
         window.addMouseMoveListener(this);
@@ -93,11 +145,26 @@ public:
             defaultShader.bind();
 
             // Clear the screen
+            glClearColor(1.f, 1.f, 1.f, 1.f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // ...
 
-			drawModel(defaultShader, model, Vector3f(0.f, 0.f, 0.f), Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 0.2f);
+//            drawModel(defaultShader, model, Vector3f(0.f, 0.f, 0.f), Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 0.2f);
+            Vector3f observer = Vector3f(0.f,1.f,1.f);
+            Vector3f target = Vector3f(0.f,0.f,-1.f);
+            Matrix4f projMatrix;
+            Matrix4f viewMatrix;
+//            Matrix4f projMatrix = projectionProjectiveMatrix(-1, 1, -1, 1, 1, -1);
+//            Matrix4f projMatrix = projectionOrthographicMatric(-1, 1, -1, 1, 1, -1);
+            
+//            Matrix4f viewMatrix = lookAtMatrix(observer, target, Vector3f(0.f, 0.f, 0.f));
+            
+            defaultShader.uniformMatrix4f("projMatrix", projMatrix);
+            defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+            
+            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+            
 			rotateAngle = rotateAngle + 0.25f;
             // Processes input and swaps the window buffer
             window.update();
@@ -154,6 +221,9 @@ private:
     Matrix4f viewMatrix;
 	Model model;
 	float rotateAngle = 0.f;
+    
+    // Terrain
+    Model map;
 };
 
 int main()

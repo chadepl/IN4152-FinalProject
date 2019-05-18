@@ -18,4 +18,4 @@ public:
 };
 
 Model loadModel(std::string path);
-Model loadMap(int width, int depth, int resolution);
+Model loadMap(float width, float depth, int resolution);
