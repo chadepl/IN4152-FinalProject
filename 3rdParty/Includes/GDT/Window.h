@@ -60,6 +60,8 @@ public:
     void onMouseMove(float x, float y);
     void onMouseButton(int button, int action, int mods);
 
+	GLFWwindow* windowPointer(){ return window; }
+
 private:
     GLFWwindow* window;
 

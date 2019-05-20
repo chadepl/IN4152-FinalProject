@@ -11,37 +11,46 @@
 #include <glm/glm/glm.hpp>
 #include <glm/glm/gtc/matrix_transform.hpp>
 #include <glm/glm/gtc/type_ptr.hpp>
+#include <GLFW/glfw3.h>
 
 #include <vector>
 #include <iostream>
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <map>
+
+#ifndef M_PI
+	#define M_PI 3.14159265358979323846
+#endif
+#define degToRad(angleInDegrees) ((angleInDegrees) * M_PI / 180.0)
 
 
 // Produces a projection matrix for perspective projection
 // http://www.songho.ca/opengl/gl_projectionmatrix.html
-Matrix4f projectionProjectiveMatrix(float fov, float aspect, float near, float far){
+Matrix4f projectionProjectiveMatrix(float fov, float aspect, float nnear, float ffar){
     
     Matrix4f projectionMatrix;
     float fov_degrees = fov * M_PI / 180;
     
     projectionMatrix[0] = 1/(aspect * tan(fov_degrees/2));
     projectionMatrix[5] = 1/tan(fov_degrees/2);
-    projectionMatrix[10] = -(far+near)/(far-near);
+    projectionMatrix[10] = -(ffar + nnear) / (ffar - nnear);
     projectionMatrix[11] = -1;
-    projectionMatrix[14] = -2*far*near/(far-near);
+    projectionMatrix[14] = -2 * ffar * nnear / (ffar - nnear);
     
     return projectionMatrix;
 }
 
-Matrix4f projectionOrthographicMatric(float near, float far, float left, float right, float top, float bottom){
+Matrix4f projectionOrthographicMatric(float nnear, float ffar, float left, float right, float top, float bottom){
     
     Matrix4f projectionMatrix;
     
     projectionMatrix[0] = 2/(right-left);
     projectionMatrix[5] = 2/(top-bottom);
-    projectionMatrix[10] = -2/(far-near);
+    projectionMatrix[10] = -2/(ffar - nnear);
     projectionMatrix[12] = -(right+left)/(right-left);
     projectionMatrix[13] = -(top+bottom)/(top-bottom);
-    projectionMatrix[14] = -(far+near)/(far-near);
+    projectionMatrix[14] = -(ffar + nnear)/(ffar - nnear);
     
     return projectionMatrix;
     
@@ -90,12 +99,19 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 class Application : KeyListener, MouseMoveListener, MouseClickListener
 {
 public:
+	Vector3f cameraPos = Vector3f(0.f, 0.f, 3.f);
+	Vector3f cameraTarget = Vector3f(0.f, 0.f, -1.f);
+	Vector3f cameraUp = Vector3f(0.f, 1.f, 0.f);
+
     void init()
     {
         window.setGlVersion(3, 3, true);
-        window.create("Final Project", 1024, 1024);
+		window.create("Final Project", 1024, 1024);
+		
+		// Capture mouse pointer to look around (sneakily get real glfwWindow)
+		glfwSetInputMode(window.windowPointer(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-		//Load cube model
+				//Load cube model
 //        model = loadModel("Resources/cube_normals.obj");
 //        map = loadMap(1, 1, 10);
         cube1 = loadCube();
@@ -152,20 +168,22 @@ public:
             // ...
 
 //            drawModel(defaultShader, model, Vector3f(0.f, 0.f, 0.f), Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 0.2f);
-            Vector3f observer = Vector3f(0.f,0.f,1.f);
-            Vector3f target = Vector3f(0.f,0.f,0.f);
+            
 //            Matrix4f projMatrix;
 //            Matrix4f viewMatrix;
             Matrix4f projMatrix = projectionProjectiveMatrix(100, 1024/1024, 0.1, 5);
-//            Matrix4f projMatrix = projectionOrthographicMatric(0.1, 5, -1, 1, 1, -1);
+           // Matrix4f projMatrix = projectionOrthographicMatric(0.1, 5, -1, 1, 1, -1);
             
-            Matrix4f viewMatrix = lookAtMatrix(observer, target, Vector3f(0.f, 1.f, 0.f));
+			processKeyboardInput();
+            Matrix4f viewMatrix = lookAtMatrix(cameraPos, cameraPos + cameraTarget, cameraUp);
             
             defaultShader.uniformMatrix4f("projMatrix", projMatrix);
             defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
-            Vector3f lightPos = Vector3f(0.f, 5.f, 5.f);
+            
+			Vector3f lightPos = Vector3f(0.f, 5.f, 5.f);
+
             defaultShader.uniform3fv("lightPos", 3, &lightPos);
-            defaultShader.uniform3fv("viewPos", 3, &observer);
+            //defaultShader.uniform3fv("viewPos", 3, &cameraPos);
             
 //            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
@@ -178,27 +196,79 @@ public:
         }
     }
 
+	// Apply camera transformations according to keyboard input
+	void processKeyboardInput() {
+		if (mKeyPressed.empty()) return;
+
+
+		if (mKeyPressed[GLFW_KEY_W]) {
+			cameraPos += dot(movementSpeed, cameraTarget);
+		}
+		if (mKeyPressed[GLFW_KEY_S]) {
+			cameraPos -= dot(movementSpeed, cameraTarget);
+		}
+		if (mKeyPressed[GLFW_KEY_A]) {
+			cameraPos -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+		}
+		if (mKeyPressed[GLFW_KEY_D]) {
+			cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+		}
+		//std::cout << "Camera pos x: " << cameraPos.x << cameraPos.y << cameraPos.z << std::endl;
+
+	}
+
     // In here you can handle key presses
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
     // mods - Any modifier keys pressed, like shift or control
-    void onKeyPressed(int key, int mods)
-    {
-        std::cout << "Key pressed: " << key << std::endl;
-    }
+	void onKeyPressed(int key, int mods)
+	{
+		mKeyPressed[key] = true;
+	}
 
     // In here you can handle key releases
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
     // mods - Any modifier keys pressed, like shift or control
     void onKeyReleased(int key, int mods)
     {
-
+		mKeyPressed[key] = false;
     }
 
     // If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
     void onMouseMove(float x, float y)
     {
-        std::cout << "Mouse at position: " << x << " " << y << std::endl;
+		if (!mouseCaptured) {
+			last_x = x;
+			last_y = y;
+			mouseCaptured = true;
+			return;
+		}
+
+		// Calculate offset between last mousepointer andnow
+		float x_off = x - last_x;
+		float y_off = y - last_y;
+
+		last_x = x;
+		last_y = y;
+        
+		x_off = x_off * mouseSensitivity;
+		y_off = y_off * mouseSensitivity;
+
+		pitch += y_off;
+		if (pitch > 90.f) {
+			pitch = 89.9f;
+		}
+		else if (pitch < -90.f) {
+			pitch = -89.9f;
+		}
+		yaw = std::fmod((yaw + x_off), (GLfloat)360.0f);
+
+		std::cout << "PITCH: " << pitch << " YAW: " << yaw << std::endl;
+		
+		cameraTarget = Vector3f(cos(degToRad(pitch)) * cos(degToRad(yaw)), sin(degToRad(pitch)), cos(degToRad(pitch)) * sin(degToRad(yaw)));
+		cameraTarget.normalize();
+		//std::cout << "Mouse at position: " << x << " " << y << std::endl;
     }
+	
 
     // If one of the mouse buttons is pressed this function will be called
     // button - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__buttons.html
@@ -228,6 +298,14 @@ private:
     Matrix4f viewMatrix;
 	Model model;
 	float rotateAngle = 0.f;
+
+	// Key and mouse input variables and parameters
+	std::map<int, bool> mKeyPressed;
+	float movementSpeed = 0.05f;
+	float mouseSensitivity = 0.1f;
+	bool mouseCaptured = false;
+	float last_x, last_y;
+	float pitch, yaw = 0.f;
     
     // Terrain
     Model map;
