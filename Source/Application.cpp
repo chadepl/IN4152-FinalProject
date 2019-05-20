@@ -11,9 +11,11 @@
 #include <glm/glm/glm.hpp>
 #include <glm/glm/gtc/matrix_transform.hpp>
 #include <glm/glm/gtc/type_ptr.hpp>
+#include <GLFW/glfw3.h>
 
 #include <vector>
 #include <iostream>
+#include <map>
 
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
 // Just make sure you let the shader know whether the model has texture coordinates
@@ -24,22 +26,31 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     modelMatrix.rotate(rotation);
 
     modelMatrix.scale(scale);
-
-	Matrix4f viewMatrix, projMatrix;
-
+	
     shader.uniformMatrix4f("modelMatrix", modelMatrix);
     shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
-	glm::mat4 View = glm::lookAt(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
+
 	//glUniformMatrix4fv(1, 1, GL_FALSE, &View[0][0]);
-	shader.uniformMatrix4f("viewMatrix", viewMatrix);
+	
 
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
+
+
+}
+
+void adjustView(Matrix4f viewMatrix, ShaderProgram& shader) {
+	shader.uniformMatrix4f("viewMatrix", viewMatrix);
 }
 
 class Application : KeyListener, MouseMoveListener, MouseClickListener
 {
 public:
+	// Camera parameters
+	glm::vec3 cameraPos = glm::vec3(0.f, 0.f, 3.f);
+	glm::vec3 cameraFront = glm::vec3(0.f, 0.f, -1.f);
+	glm::vec3 cameraUp = glm::vec3(0.f, 1.f, 0.f);
+
     void init()
     {
         window.setGlVersion(3, 3, true);
@@ -84,6 +95,18 @@ public:
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
     }
 
+	Matrix4f cameraView() {
+		Matrix4f view;
+		
+		glm::mat4 View = glm::lookAt(cameraPos, cameraFront, cameraUp);
+
+		const float *pSource = (const float*)glm::value_ptr(View);
+		for (int i = 0; i < 16; ++i)
+			view[i] = pSource[i];
+
+		return view;
+	}
+
     void update()
     {
         // This is your game loop
@@ -96,9 +119,11 @@ public:
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // ...
-
-			drawModel(defaultShader, model, Vector3f(0.f, 0.f, 0.f), Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 0.2f);
-			rotateAngle = rotateAngle + 0.25f;
+			//Compute new camera location/view
+			viewMatrix = cameraView();
+			adjustView(viewMatrix, defaultShader);
+			drawModel(defaultShader, model, Vector3f(0.f, 0.f, 0.f), Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 0.5f);
+			rotateAngle = rotateAngle; //+ 0.25f;
             // Processes input and swaps the window buffer
             window.update();
         }
@@ -109,8 +134,23 @@ public:
     // mods - Any modifier keys pressed, like shift or control
     void onKeyPressed(int key, int mods)
     {
+		if (key == GLFW_KEY_W) {
+			cameraPos += 0.1f * cameraFront;
+		}
+		if (key == GLFW_KEY_S) {
+			cameraPos -= 0.1f * cameraFront;
+		}
+		if (key == GLFW_KEY_A) {
+			cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * 0.1f;
+		}
+		if (key == GLFW_KEY_D) {
+			cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * 0.1f;
+		}
+		std::cout << "Camera pos x: " << cameraPos.x << cameraPos.y << cameraPos.z << std::endl;
         std::cout << "Key pressed: " << key << std::endl;
     }
+
+	
 
     // In here you can handle key releases
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
@@ -154,6 +194,10 @@ private:
     Matrix4f viewMatrix;
 	Model model;
 	float rotateAngle = 0.f;
+
+	//Register keys and pressed state
+	std::map<int, bool> mKeyPressed;
+
 };
 
 int main()
