@@ -4,10 +4,11 @@ uniform sampler2D colorMap;
 uniform sampler2D shadowMap;
 
 uniform bool hasTexCoords;
+uniform vec3 lightPos;
 
-vec3 viewPos = vec3(1, 1, 1);
+uniform vec3 viewPos;
 
-vec3 lightPos = vec3(1.0,1.0,1.0);
+
 vec3 lightColor = vec3(1.0, 1.0, 1.0);
 float lightPower = 40.0;
 vec3 ambientColor = vec3(0.1, 0.0, 0.0);
@@ -66,13 +67,7 @@ void main()
     // use the gamma corrected color in the fragment
 //    gl_FragColor = vec4(colorGammaCorrected, 1.0);
     
-    // Color based on hight (for the terrain)
-    if (passPosition.y < 0){
-        color = vec3(0, 0, 1) * clamp(-passPosition.y + 0.1, 0, 1);
-    } else {
-        color = vec3(0, 1, 0) * passPosition.y;
-    }
 
     // Output color value, change from (1, 0, 0) to something else
-    fragColor = vec4(color.xyz, 1.0);
+    fragColor = vec4(colorGammaCorrected.xyz, 1.0);
 }

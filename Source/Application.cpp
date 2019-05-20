@@ -15,20 +15,19 @@
 #include <vector>
 #include <iostream>
 
+
 // Produces a projection matrix for perspective projection
 // http://www.songho.ca/opengl/gl_projectionmatrix.html
-Matrix4f projectionProjectiveMatrix(float near, float far, float left, float right, float top, float bottom){
+Matrix4f projectionProjectiveMatrix(float fov, float aspect, float near, float far){
     
     Matrix4f projectionMatrix;
+    float fov_degrees = fov * M_PI / 180;
     
-    projectionMatrix[0] = 2*near/(right-left);
-    projectionMatrix[5] = 2*near/(top-bottom);
-    projectionMatrix[8] = (right+left)/(right-left);
-    projectionMatrix[9] = (top+bottom)/(top-bottom);
-    projectionMatrix[10] = -(far+near)/far-near;
+    projectionMatrix[0] = 1/(aspect * tan(fov_degrees/2));
+    projectionMatrix[5] = 1/tan(fov_degrees/2);
+    projectionMatrix[10] = -(far+near)/(far-near);
     projectionMatrix[11] = -1;
     projectionMatrix[14] = -2*far*near/(far-near);
-    projectionMatrix[15] = 0;
     
     return projectionMatrix;
 }
@@ -98,7 +97,9 @@ public:
 
 		//Load cube model
 //        model = loadModel("Resources/cube_normals.obj");
-        map = loadMap(1, 1, 10);
+//        map = loadMap(1, 1, 10);
+        cube1 = loadCube();
+        cube2 = loadCube();
 
         window.addKeyListener(this);
         window.addMouseMoveListener(this);
@@ -151,19 +152,25 @@ public:
             // ...
 
 //            drawModel(defaultShader, model, Vector3f(0.f, 0.f, 0.f), Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 0.2f);
-            Vector3f observer = Vector3f(0.f,1.f,1.f);
-            Vector3f target = Vector3f(0.f,0.f,-1.f);
-            Matrix4f projMatrix;
-            Matrix4f viewMatrix;
-//            Matrix4f projMatrix = projectionProjectiveMatrix(-1, 1, -1, 1, 1, -1);
-//            Matrix4f projMatrix = projectionOrthographicMatric(-1, 1, -1, 1, 1, -1);
+            Vector3f observer = Vector3f(0.f,0.f,1.f);
+            Vector3f target = Vector3f(0.f,0.f,0.f);
+//            Matrix4f projMatrix;
+//            Matrix4f viewMatrix;
+            Matrix4f projMatrix = projectionProjectiveMatrix(100, 1024/1024, 0.1, 5);
+//            Matrix4f projMatrix = projectionOrthographicMatric(0.1, 5, -1, 1, 1, -1);
             
-//            Matrix4f viewMatrix = lookAtMatrix(observer, target, Vector3f(0.f, 0.f, 0.f));
+            Matrix4f viewMatrix = lookAtMatrix(observer, target, Vector3f(0.f, 1.f, 0.f));
             
             defaultShader.uniformMatrix4f("projMatrix", projMatrix);
             defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+            Vector3f lightPos = Vector3f(0.f, 5.f, 5.f);
+            defaultShader.uniform3fv("lightPos", 3, &lightPos);
+            defaultShader.uniform3fv("viewPos", 3, &observer);
             
-            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+//            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+            
+            drawModel(defaultShader, cube1, Vector3f(0.f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
+            drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
             
 			rotateAngle = rotateAngle + 0.25f;
             // Processes input and swaps the window buffer
@@ -224,6 +231,8 @@ private:
     
     // Terrain
     Model map;
+    Model cube1;
+    Model cube2;
 };
 
 int main()

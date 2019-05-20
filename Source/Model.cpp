@@ -9,6 +9,8 @@
 #include <ctime>    // For time()
 #include <cstdlib>  // For srand() and rand()
 
+#include <noise/noise.h>
+
 Model loadModel(std::string path)
 {
     tinyobj::attrib_t attrib;
@@ -109,7 +111,7 @@ Model loadModel(std::string path)
     return model;
 }
 
-float noise(float x, float z){
+float myNoise(float x, float z){
     return rand() % 2;
 }
 
@@ -144,16 +146,16 @@ Model loadMap(float width, float depth, int resolution)
             std::cout << "PosT 1z: " << pos1z << std::endl;
             std::cout << "PosT 2z: " << pos2z << std::endl;
             
-            float height11 = noise(pos1x, pos1z);
+            float height11 = myNoise(pos1x, pos1z);
             Vector3f point11 = Vector3f(pos1x, height11, pos1z);
             
-            float height12 = noise(pos1x, pos2z);
+            float height12 = myNoise(pos1x, pos2z);
             Vector3f point12 = Vector3f(pos1x, height12, pos2z);
             
-            float height21 = noise(pos2x, pos1z);
+            float height21 = myNoise(pos2x, pos1z);
             Vector3f point21 = Vector3f(pos2x, height21, pos1z);
             
-            float height22 = noise(pos2x, pos2z);
+            float height22 = myNoise(pos2x, pos2z);
             Vector3f point22 = Vector3f(pos2x, height22, pos2z);
             
             std::cout << "Random: " << height11 << std::endl;
@@ -213,4 +215,101 @@ Model loadMap(float width, float depth, int resolution)
     }
     
     return model;
+}
+
+Model loadCube(){
+    
+    Model cube;
+    
+    Vector3f p1 = Vector3f(-0.5, -0.5, 0.5);
+    Vector3f p2 = Vector3f(0.5, -0.5, 0.5);
+    Vector3f p3 = Vector3f(0.5, 0.5, 0.5);
+    Vector3f p4 = Vector3f(-0.5, 0.5, 0.5);
+    Vector3f p5 = Vector3f(-0.5, -0.5, -0.5);
+    Vector3f p6 = Vector3f(0.5, -0.5, -0.5);
+    Vector3f p7 = Vector3f(0.5, 0.5, -0.5);
+    Vector3f p8 = Vector3f(-0.5, 0.5, -0.5);
+    Vector3f U, V;
+    
+    cube.vertices.push_back(p1); cube.vertices.push_back(p3); cube.vertices.push_back(p4);
+    cube.vertices.push_back(p1); cube.vertices.push_back(p2); cube.vertices.push_back(p3);
+    U = p4 - p3; V = p3 - p1; cube.normals.push_back(cross(U, V));
+    U = p4 - p3; V = p3 - p1; cube.normals.push_back(cross(U, V));
+    U = p4 - p3; V = p3 - p1; cube.normals.push_back(cross(U, V));
+    U = p3 - p2; V = p2 - p1; cube.normals.push_back(cross(U, V));
+    U = p3 - p2; V = p2 - p1; cube.normals.push_back(cross(U, V));
+    U = p3 - p2; V = p2 - p1; cube.normals.push_back(cross(U, V));
+    
+    cube.vertices.push_back(p2); cube.vertices.push_back(p7); cube.vertices.push_back(p3);
+    cube.vertices.push_back(p2); cube.vertices.push_back(p6); cube.vertices.push_back(p7);
+    U = p3 - p7; V = p7 - p2; cube.normals.push_back(cross(U, V));
+    U = p3 - p7; V = p7 - p2; cube.normals.push_back(cross(U, V));
+    U = p3 - p7; V = p7 - p2; cube.normals.push_back(cross(U, V));
+    U = p7 - p6; V = p6 - p2; cube.normals.push_back(cross(U, V));
+    U = p7 - p6; V = p6 - p2; cube.normals.push_back(cross(U, V));
+    U = p7 - p6; V = p6 - p2; cube.normals.push_back(cross(U, V));
+    
+    cube.vertices.push_back(p6); cube.vertices.push_back(p8); cube.vertices.push_back(p7);
+    cube.vertices.push_back(p6); cube.vertices.push_back(p5); cube.vertices.push_back(p8);
+    U = p7 - p8; V = p8 - p6; cube.normals.push_back(cross(U, V));
+    U = p7 - p8; V = p8 - p6; cube.normals.push_back(cross(U, V));
+    U = p7 - p8; V = p8 - p6; cube.normals.push_back(cross(U, V));
+    U = p8 - p5; V = p5 - p6; cube.normals.push_back(cross(U, V));
+    U = p8 - p5; V = p5 - p6; cube.normals.push_back(cross(U, V));
+    U = p8 - p5; V = p5 - p6; cube.normals.push_back(cross(U, V));
+    
+    cube.vertices.push_back(p5); cube.vertices.push_back(p4); cube.vertices.push_back(p8);
+    cube.vertices.push_back(p5); cube.vertices.push_back(p1); cube.vertices.push_back(p4);
+    U = p8 - p4; V = p4 - p5; cube.normals.push_back(cross(U, V));
+    U = p8 - p4; V = p4 - p5; cube.normals.push_back(cross(U, V));
+    U = p8 - p4; V = p4 - p5; cube.normals.push_back(cross(U, V));
+    U = p4 - p1; V = p1 - p5; cube.normals.push_back(cross(U, V));
+    U = p4 - p1; V = p1 - p5; cube.normals.push_back(cross(U, V));
+    U = p4 - p1; V = p1 - p5; cube.normals.push_back(cross(U, V));
+    
+    cube.vertices.push_back(p4); cube.vertices.push_back(p7); cube.vertices.push_back(p8);
+    cube.vertices.push_back(p4); cube.vertices.push_back(p3); cube.vertices.push_back(p7);
+    U = p8 - p7; V = p7 - p4; cube.normals.push_back(cross(U, V));
+    U = p8 - p7; V = p7 - p4; cube.normals.push_back(cross(U, V));
+    U = p8 - p7; V = p7 - p4; cube.normals.push_back(cross(U, V));
+    U = p7 - p3; V = p3 - p4; cube.normals.push_back(cross(U, V));
+    U = p7 - p3; V = p3 - p4; cube.normals.push_back(cross(U, V));
+    U = p7 - p3; V = p3 - p4; cube.normals.push_back(cross(U, V));
+    
+    cube.vertices.push_back(p5); cube.vertices.push_back(p2); cube.vertices.push_back(p1);
+    cube.vertices.push_back(p5); cube.vertices.push_back(p6); cube.vertices.push_back(p2);
+    U = p1 - p2; V = p2 - p5; cube.normals.push_back(cross(U, V));
+    U = p1 - p2; V = p2 - p5; cube.normals.push_back(cross(U, V));
+    U = p1 - p2; V = p2 - p5; cube.normals.push_back(cross(U, V));
+    U = p2 - p6; V = p6 - p5; cube.normals.push_back(cross(U, V));
+    U = p2 - p6; V = p6 - p5; cube.normals.push_back(cross(U, V));
+    U = p2 - p6; V = p6 - p5; cube.normals.push_back(cross(U, V));
+    
+    glGenVertexArrays(1, &cube.vao);
+    glBindVertexArray(cube.vao);
+    
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, cube.vertices.size() * sizeof(Vector3f), cube.vertices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+    
+    GLuint nbo;
+    glGenBuffers(1, &nbo);
+    glBindBuffer(GL_ARRAY_BUFFER, nbo);
+    glBufferData(GL_ARRAY_BUFFER, cube.normals.size() * sizeof(Vector3f), cube.normals.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+    
+    // My attempt to create a color buffer object
+//    GLuint cbo;
+//    glGenBuffers(1, &cbo);
+//    glBindBuffer(GL_ARRAY_BUFFER, cbo);
+//    glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(Vector3f), colors.data(), GL_STATIC_DRAW);
+//    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+//    glEnableVertexAttribArray(1);
+    
+    return cube;
+    
 }

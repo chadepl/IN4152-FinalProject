@@ -32,10 +32,12 @@ add_executable(${PROJECT}
 IF (WIN32)
 target_link_libraries (${PROJECT} ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/Libraries/glfw3.lib)
 target_link_libraries (${PROJECT} ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/Libraries/GDT/$<CONFIG>/GDT.lib)
+target_link_libraries (${PROJECT} ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/Libraries/libnoise/libnoise.a)
 ENDIF()
 IF (APPLE)
 target_link_libraries (${PROJECT} /usr/local/lib/libglfw.3.3.dylib)
 target_link_libraries (${PROJECT} ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/Libraries/GDT/$<CONFIG>/libGDT.a)
+target_link_libraries (${PROJECT} ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/Libraries/libnoise/libnoise.a)
 ENDIF()
 
 

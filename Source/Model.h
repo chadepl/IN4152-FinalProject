@@ -19,3 +19,4 @@ public:
 
 Model loadModel(std::string path);
 Model loadMap(float width, float depth, int resolution);
+Model loadCube();
