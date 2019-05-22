@@ -3,14 +3,16 @@
 uniform sampler2D colorMap;
 uniform sampler2D shadowMap;
 
+uniform bool hasColor;
 uniform bool hasTexCoords;
-uniform vec3 lightPos;
+//uniform vec3 lightPos;
 
 uniform vec3 viewPos;
 
 
+vec3 lightPos = vec3(0.0, 10.0, 0.0);
 vec3 lightColor = vec3(1.0, 1.0, 1.0);
-float lightPower = 40.0;
+float lightPower = 100.0;
 vec3 ambientColor = vec3(0.1, 0.0, 0.0);
 vec3 diffuseColor = vec3(0.5, 0.0, 0.0);
 vec3 specColor = vec3(1.0, 1.0, 1.0);
@@ -21,6 +23,7 @@ in vec3 passPosition;
 in vec3 passNormal;
 in vec2 passTexCoord;
 in vec4 passShadowCoord;
+in vec3 passColor;
 
 out vec4 fragColor;
 
@@ -28,9 +31,11 @@ void main()
 {
     vec3 normal = normalize(passNormal);
     
-    vec3 color = vec3(1, 1, 1);
+    vec3 color = vec3(0, 0.5, 0);
     if (hasTexCoords)
         color = texture(colorMap, passTexCoord).rgb;
+    if (hasColor)
+        color = passColor;
     
     // Blinn Phong Shading
     vec3 lightDir = lightPos - passPosition;
@@ -50,15 +55,9 @@ void main()
         float specAngle = max(dot(halfDir, normal), 0.0);
         specular = pow(specAngle, shininess);
         
-        // this is phong (for comparison)
-//        if(mode == 2) {
-//            vec3 reflectDir = reflect(-lightDir, normal);
-//            specAngle = max(dot(reflectDir, viewDir), 0.0);
-//            // note that the exponent is different here
-//            specular = pow(specAngle, shininess/4.0);
-//        }
     }
-    vec3 colorLinear = ambientColor +
+    
+    vec3 colorLinear = color +
     diffuseColor * lambertian * lightColor * lightPower / distance +
     specColor * specular * lightColor * lightPower / distance;
     // apply gamma correction (assume ambientColor, diffuseColor and specColor
@@ -69,5 +68,6 @@ void main()
     
 
     // Output color value, change from (1, 0, 0) to something else
-    fragColor = vec4(colorGammaCorrected.xyz, 1.0);
+    fragColor = vec4(color
+                     .xyz, 1.0);
 }

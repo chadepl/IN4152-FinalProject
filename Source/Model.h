@@ -13,6 +13,7 @@ public:
     std::vector<Vector3f> vertices;
     std::vector<Vector3f> normals;
     std::vector<Vector2f> texCoords;
+    std::vector<Vector3f> colors;
 
     GLuint vao;
 };
@@ -20,3 +21,4 @@ public:
 Model loadModel(std::string path);
 Model loadMap(float width, float depth, int resolution);
 Model loadCube();
+Vector3f getColor(float height);

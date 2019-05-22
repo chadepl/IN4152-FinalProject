@@ -111,8 +111,16 @@ Model loadModel(std::string path)
     return model;
 }
 
-float myNoise(float x, float z){
-    return rand() % 2;
+//float[][] buildHeightMap(float x, float z){
+//    return rand() % 2;
+//}
+
+float getNoiseValue(noise::module::Perlin perlinGenerator, float posX, float posZ){
+    float elevation = 1 * perlinGenerator.GetValue(1 * posX, 0, 1 * posZ)
+        + 0.5 * perlinGenerator.GetValue(2 * posX, 0, 2 * posZ)
+        + 0.25 * perlinGenerator.GetValue(4 * posX, 0, 4 * posZ);
+    elevation = pow(elevation, 3);
+    return elevation;
 }
 
 
@@ -122,14 +130,13 @@ Model loadMap(float width, float depth, int resolution)
 {
     
     Model model;
+    srand(time(0));
     
     float stepX = (float) width/resolution;
     float stepZ = (float) depth/resolution;
-    
-    srand(time(0));
 
-    
-    unsigned int gridArea = resolution * resolution;
+    // Initialize noise
+    noise::module::Perlin myModule;
     
     for (int i = 0; i < resolution; i++) {
         for (int j = 0; j < resolution; j++) {
@@ -140,52 +147,58 @@ Model loadMap(float width, float depth, int resolution)
             float pos1z = j * stepZ;
             float pos2z = (j + 1) * stepZ;
             
-            std::cout << "New pair of triangles: " << std::endl;
-            std::cout << "PosT 1x: " << pos1x << std::endl;
-            std::cout << "PosT 2x: " << pos2x << std::endl;
-            std::cout << "PosT 1z: " << pos1z << std::endl;
-            std::cout << "PosT 2z: " << pos2z << std::endl;
-            
-            float height11 = myNoise(pos1x, pos1z);
+            float height11 = getNoiseValue(myModule, pos1x, pos1z);
             Vector3f point11 = Vector3f(pos1x, height11, pos1z);
             
-            float height12 = myNoise(pos1x, pos2z);
+            float height12 = getNoiseValue(myModule, pos1x, pos2z);
             Vector3f point12 = Vector3f(pos1x, height12, pos2z);
             
-            float height21 = myNoise(pos2x, pos1z);
+            float height21 = getNoiseValue(myModule, pos2x, pos1z);
             Vector3f point21 = Vector3f(pos2x, height21, pos1z);
             
-            float height22 = myNoise(pos2x, pos2z);
+            float height22 = getNoiseValue(myModule, pos2x, pos2z);
             Vector3f point22 = Vector3f(pos2x, height22, pos2z);
             
-            std::cout << "Random: " << height11 << std::endl;
+            Vector3f P, Q;
+            Vector3f normalVec;
             
-            Vector3f U, V;
-            
-            // First triangle
+            /*** First triangle ***/
             model.vertices.push_back(point11);
             model.vertices.push_back(point21);
             model.vertices.push_back(point22);
             
-            U = point21 - point11;
-            V = point22 - point21;
+            P = point21 - point11;
+            Q = point22 - point21;
             
-            model.normals.push_back(cross(U, V));
-            Vector3f normal = cross(U, V);
+            normalVec = cross(P, Q);
             
-            // Complementary triangle
+            model.normals.push_back(normalVec);
+            model.normals.push_back(normalVec);
+            model.normals.push_back(normalVec);
+            
+            model.colors.push_back(getColor(height11));
+            model.colors.push_back(getColor(height21));
+            model.colors.push_back(getColor(height22));
+            
+            /*** Second triangle ***/
             model.vertices.push_back(point11);
             model.vertices.push_back(point22);
             model.vertices.push_back(point12);
             
-            U = point12 - point22;
-            V = point11 - point12;
+            P = point12 - point22;
+            Q = point11 - point12;
             
-            model.normals.push_back(cross(U, V));
+            normalVec = cross(P, Q);
+            
+            model.normals.push_back(normalVec);
+            model.normals.push_back(normalVec);
+            model.normals.push_back(normalVec);
+            
+            model.colors.push_back(getColor(height11));
+            model.colors.push_back(getColor(height22));
+            model.colors.push_back(getColor(height12));
         }
     }
-    
-    std::cout << "Size: " << model.vertices.size() << std::endl;
     
     glGenVertexArrays(1, &model.vao);
     glBindVertexArray(model.vao);
@@ -214,7 +227,32 @@ Model loadMap(float width, float depth, int resolution)
         glEnableVertexAttribArray(2);
     }
     
+    GLuint cbo;
+    glGenBuffers(1, &cbo);
+    glBindBuffer(GL_ARRAY_BUFFER, cbo);
+    glBufferData(GL_ARRAY_BUFFER, model.colors.size() * sizeof(Vector3f), model.colors.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(3);
+    
     return model;
+}
+
+Vector3f WATER = Vector3f(0.2f, 0.6f, 1.f) * 0.5;
+Vector3f BEACH = Vector3f(1.f, 0.8f, 0.4f) * 0.5;
+Vector3f FOREST = Vector3f(0.f, 0.2f, 0.f) * 0.5;
+Vector3f JUNGLE = Vector3f(0.2f, 0.8f, 0.2f) * 0.5;
+Vector3f SAVANNAH = Vector3f(1.f, 0.8f, 0.f) * 0.5;
+Vector3f DESERT = Vector3f(1.f, 0.4f, 0.f) * 0.5;
+Vector3f SNOW = Vector3f(255.f, 255.f, 0.8f) * 0.5;
+
+Vector3f getColor(float e){
+    if (e < 0.1) return WATER;
+    else if (e < 0.2) return BEACH;
+    else if (e < 0.3) return FOREST;
+    else if (e < 0.5) return JUNGLE;
+    else if (e < 0.7) return SAVANNAH;
+    else if (e < 0.9) return DESERT;
+    else return SNOW;
 }
 
 Model loadCube(){
