@@ -88,6 +88,7 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 
     shader.uniformMatrix4f("modelMatrix", modelMatrix);
     shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
+    shader.uniform1i("hasColor", model.colors.size() > 0);
 
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
@@ -107,13 +108,18 @@ public:
     {
         window.setGlVersion(3, 3, true);
 		window.create("Final Project", 1024, 1024);
+        
+        // Viewport for camera calculations
+        glGetIntegerv( GL_VIEWPORT, m_viewport);
 		
 		// Capture mouse pointer to look around (sneakily get real glfwWindow)
 		glfwSetInputMode(window.windowPointer(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 				//Load cube model
 //        model = loadModel("Resources/cube_normals.obj");
-//        map = loadMap(1, 1, 10);
+        mapWidth = 50;
+        mapDepth = 50;
+        map = loadMap(mapWidth, mapDepth, 1000);
         cube1 = loadCube();
         cube2 = loadCube();
 
@@ -169,9 +175,9 @@ public:
 
 //            drawModel(defaultShader, model, Vector3f(0.f, 0.f, 0.f), Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 0.2f);
             
-//            Matrix4f projMatrix;
-//            Matrix4f viewMatrix;
-            Matrix4f projMatrix = projectionProjectiveMatrix(100, 1024/1024, 0.1, 5);
+
+            
+            Matrix4f projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
            // Matrix4f projMatrix = projectionOrthographicMatric(0.1, 5, -1, 1, 1, -1);
             
 			processKeyboardInput();
@@ -182,11 +188,12 @@ public:
             
 			Vector3f lightPos = Vector3f(0.f, 5.f, 5.f);
 
-            defaultShader.uniform3fv("lightPos", 3, &lightPos);
+            defaultShader.uniform3f("viewPos", cameraPos);
             //defaultShader.uniform3fv("viewPos", 3, &cameraPos);
             
 //            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
+            drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
             drawModel(defaultShader, cube1, Vector3f(0.f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
             drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
             
@@ -309,8 +316,14 @@ private:
     
     // Terrain
     Model map;
+    double mapWidth, mapDepth;
     Model cube1;
     Model cube2;
+    Model cubeNormals;
+    Model sphere;
+    
+    
+    GLint m_viewport[4];
 };
 
 int main()
