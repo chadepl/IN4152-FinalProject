@@ -122,6 +122,8 @@ public:
         map = loadMap(mapWidth, mapDepth, 1000);
         cube1 = loadCube();
         cube2 = loadCube();
+        dragon = loadModel("Resources/dragon.obj");
+        davidHead = loadModel("Resources/DavidHeadCleanMax.obj");
 
         window.addKeyListener(this);
         window.addMouseMoveListener(this);
@@ -193,9 +195,11 @@ public:
             
 //            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
-            drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
-            drawModel(defaultShader, cube1, Vector3f(0.f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
+//            drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
+//            drawModel(defaultShader, cube1, Vector3f(0.f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
             drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
+            drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
+            drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
             
 			rotateAngle = rotateAngle + 0.25f;
             // Processes input and swaps the window buffer
@@ -321,6 +325,8 @@ private:
     Model cube2;
     Model cubeNormals;
     Model sphere;
+    Model dragon;
+    Model davidHead;
     
     
     GLint m_viewport[4];
