@@ -1,0 +1,41 @@
+﻿  latlon.cpp
+  cylinder.cpp
+  line.cpp
+  plane.cpp
+  sphere.cpp
+  abs.cpp
+  add.cpp
+  billow.cpp
+  blend.cpp
+  cache.cpp
+  checkerboard.cpp
+  clamp.cpp
+  const.cpp
+  curve.cpp
+  cylinders.cpp
+  displace.cpp
+  exponent.cpp
+  invert.cpp
+  max.cpp
+  min.cpp
+  Generating Code...
+  Compiling...
+  modulebase.cpp
+  multiply.cpp
+  perlin.cpp
+  power.cpp
+  ridgedmulti.cpp
+  rotatepoint.cpp
+  scalebias.cpp
+  scalepoint.cpp
+  select.cpp
+  spheres.cpp
+  terrace.cpp
+  translatepoint.cpp
+  turbulence.cpp
+  voronoi.cpp
+  noisegen.cpp
+  dllmain.cpp
+  Generating Code...
+     Creating library .\win32/Debug\libnoise.lib and object .\win32/Debug\libnoise.exp
+  libnoise.vcxproj -> D:\TU Delft\Computer Graphics\Repo\IN4152-FinalProject\3rdParty\Libraries\libnoise-master\libnoise-master\./x64/Debug/libnoise.dll

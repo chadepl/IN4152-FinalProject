@@ -1,3 +1,4 @@
+#pragma comment(lib, "libnoise.lib")
 #pragma once
 
 #include <GDT/OpenGL.h>

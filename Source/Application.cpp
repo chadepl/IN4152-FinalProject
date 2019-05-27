@@ -100,8 +100,8 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 class Application : KeyListener, MouseMoveListener, MouseClickListener
 {
 public:
-	Vector3f cameraPos = Vector3f(0.f, 0.f, 3.f);
-	Vector3f cameraTarget = Vector3f(0.f, 0.f, -1.f);
+	Vector3f cameraPos = Vector3f(0.f, 1.f, 3.f);
+	Vector3f cameraTarget = Vector3f(0, 0, -1.0f);
 	Vector3f cameraUp = Vector3f(0.f, 1.f, 0.f);
 
     void init()
@@ -117,13 +117,13 @@ public:
 
 				//Load cube model
 //        model = loadModel("Resources/cube_normals.obj");
-        mapWidth = 50;
-        mapDepth = 50;
-        map = loadMap(mapWidth, mapDepth, 1000);
+        mapWidth = 5;
+        mapDepth = 5;
+        map = loadMap(mapWidth, mapDepth, 100);
         cube1 = loadCube();
         cube2 = loadCube();
-        dragon = loadModel("Resources/dragon.obj");
-        davidHead = loadModel("Resources/DavidHeadCleanMax.obj");
+        //dragon = loadModel("Resources/dragon.obj");
+        //davidHead = loadModel("Resources/DavidHeadCleanMax.obj");
 
         window.addKeyListener(this);
         window.addMouseMoveListener(this);
@@ -185,21 +185,22 @@ public:
 			processKeyboardInput();
             Matrix4f viewMatrix = lookAtMatrix(cameraPos, cameraPos + cameraTarget, cameraUp);
             
+			
             defaultShader.uniformMatrix4f("projMatrix", projMatrix);
             defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
             
-			Vector3f lightPos = Vector3f(0.f, 5.f, 5.f);
+			Vector3f lightPos = Vector3f(0.f, 10.f, 0.f);
 
-            defaultShader.uniform3f("viewPos", cameraPos);
+            //defaultShader.uniform3f("viewPos", cameraPos);
             //defaultShader.uniform3fv("viewPos", 3, &cameraPos);
             
 //            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
-//            drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
+            drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
 //            drawModel(defaultShader, cube1, Vector3f(0.f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
             drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
-            drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
-            drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
+            //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
+            //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
             
 			rotateAngle = rotateAngle + 0.25f;
             // Processes input and swaps the window buffer
@@ -213,16 +214,38 @@ public:
 
 
 		if (mKeyPressed[GLFW_KEY_W]) {
-			cameraPos += dot(movementSpeed, cameraTarget);
+			//cameraPos += cameraPos * movementSpeed;
+			//cameraPos += dot(movementSpeed, cameraTarget);
+			
+			Vector3f forwardVector = cameraTarget;
+
+			forwardVector.normalize(); // normalise your vector
+
+			//moving forward :
+			cameraPos += forwardVector * movementSpeed;
+			//cameraTarget += forwardVector * movementSpeed;
+			std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
 		}
 		if (mKeyPressed[GLFW_KEY_S]) {
-			cameraPos -= dot(movementSpeed, cameraTarget);
+			//cameraPos -= cameraPos * movementSpeed;
+			Vector3f forwardVector = cameraTarget;
+
+			forwardVector.normalize(); // normalise your vector
+
+			//moving forward :
+			cameraPos -= forwardVector * movementSpeed;
+			//cameraTarget -= forwardVector * movementSpeed;
+
+
+			std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
+			//cameraPos -= dot(movementSpeed, cameraTarget);
 		}
 		if (mKeyPressed[GLFW_KEY_A]) {
 			cameraPos -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
 		}
 		if (mKeyPressed[GLFW_KEY_D]) {
 			cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+			
 		}
 		//std::cout << "Camera pos x: " << cameraPos.x << cameraPos.y << cameraPos.z << std::endl;
 
@@ -273,10 +296,11 @@ public:
 		}
 		yaw = std::fmod((yaw + x_off), (GLfloat)360.0f);
 
-		std::cout << "PITCH: " << pitch << " YAW: " << yaw << std::endl;
+		//std::cout << "PITCH: " << pitch << " YAW: " << yaw << std::endl;
 		
 		cameraTarget = Vector3f(cos(degToRad(pitch)) * cos(degToRad(yaw)), sin(degToRad(pitch)), cos(degToRad(pitch)) * sin(degToRad(yaw)));
 		cameraTarget.normalize();
+		//std::cout << "Target X: " << cameraTarget.x << "Y: " << cameraTarget.y << "Z: " << cameraTarget.z << std::endl;
 		//std::cout << "Mouse at position: " << x << " " << y << std::endl;
     }
 	
