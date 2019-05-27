@@ -214,31 +214,16 @@ public:
 
 
 		if (mKeyPressed[GLFW_KEY_W]) {
-			//cameraPos += cameraPos * movementSpeed;
-			//cameraPos += dot(movementSpeed, cameraTarget);
+			// Move forward using unit direction vector
+			cameraPos += cameraTarget.normalize() * movementSpeed;
 			
-			Vector3f forwardVector = cameraTarget;
-
-			forwardVector.normalize(); // normalise your vector
-
-			//moving forward :
-			cameraPos += forwardVector * movementSpeed;
-			//cameraTarget += forwardVector * movementSpeed;
-			std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
+			//std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
 		}
 		if (mKeyPressed[GLFW_KEY_S]) {
-			//cameraPos -= cameraPos * movementSpeed;
-			Vector3f forwardVector = cameraTarget;
+			// Move backward using unit direction vector
+			cameraPos -= cameraTarget.normalize() * movementSpeed;
 
-			forwardVector.normalize(); // normalise your vector
-
-			//moving forward :
-			cameraPos -= forwardVector * movementSpeed;
-			//cameraTarget -= forwardVector * movementSpeed;
-
-
-			std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
-			//cameraPos -= dot(movementSpeed, cameraTarget);
+			//std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;		
 		}
 		if (mKeyPressed[GLFW_KEY_A]) {
 			cameraPos -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
@@ -277,7 +262,7 @@ public:
 			return;
 		}
 
-		// Calculate offset between last mousepointer andnow
+		// Calculate offset between last and now
 		float x_off = x - last_x;
 		float y_off = y - last_y;
 
@@ -296,12 +281,8 @@ public:
 		}
 		yaw = std::fmod((yaw + x_off), (GLfloat)360.0f);
 
-		//std::cout << "PITCH: " << pitch << " YAW: " << yaw << std::endl;
-		
 		cameraTarget = Vector3f(cos(degToRad(pitch)) * cos(degToRad(yaw)), sin(degToRad(pitch)), cos(degToRad(pitch)) * sin(degToRad(yaw)));
 		cameraTarget.normalize();
-		//std::cout << "Target X: " << cameraTarget.x << "Y: " << cameraTarget.y << "Z: " << cameraTarget.z << std::endl;
-		//std::cout << "Mouse at position: " << x << " " << y << std::endl;
     }
 	
 

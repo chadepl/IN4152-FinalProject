@@ -1,4 +1,6 @@
-#pragma comment(lib, "libnoise.lib")
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+	#pragma comment(lib, "libnoise.lib")
+#endif
 #pragma once
 
 #include <GDT/OpenGL.h>
