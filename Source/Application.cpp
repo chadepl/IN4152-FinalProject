@@ -90,6 +90,8 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
     shader.uniform1i("hasColor", model.colors.size() > 0);
 
+
+
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
     
@@ -120,10 +122,12 @@ public:
         mapWidth = 5;
         mapDepth = 5;
         map = loadMap(mapWidth, mapDepth, 100);
-        cube1 = loadCube();
-        cube2 = loadCube();
+        //cube1 = loadCube();
+        //cube2 = loadCube();
         //dragon = loadModel("Resources/dragon.obj");
         //davidHead = loadModel("Resources/DavidHeadCleanMax.obj");
+		earth = loadModel("Resources/gijsEarth.obj");
+		earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
 
         window.addKeyListener(this);
         window.addMouseMoveListener(this);
@@ -196,9 +200,11 @@ public:
             
 //            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
-            drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
+            //drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
 //            drawModel(defaultShader, cube1, Vector3f(0.f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
-            drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
+            //drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
+
+			drawModel(defaultShader, earth, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, rotateAngle, 0), .5f);
             //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
             //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
             
@@ -332,6 +338,8 @@ private:
     Model sphere;
     Model dragon;
     Model davidHead;
+	Model earth;
+	Image earth_texture;
     
     
     GLint m_viewport[4];

@@ -27,8 +27,8 @@ Model loadModel(std::string path)
         exit(1);
     }
 
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, &ifs);
-
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "Resources/");
+	
     if (!err.empty()) {
         std::cerr << err << std::endl;
     }
@@ -82,6 +82,9 @@ Model loadModel(std::string path)
             shapes[s].mesh.material_ids[f];
         }
     }
+
+	model.shapes = shapes;
+	model.materials = materials;
 
     glGenVertexArrays(1, &model.vao);
     glBindVertexArray(model.vao);

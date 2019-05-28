@@ -2,6 +2,8 @@
 	#pragma comment(lib, "libnoise.lib")
 #endif
 #pragma once
+#include "tiny_obj_loader.h"
+
 
 #include <GDT/OpenGL.h>
 #include <GDT/Vector2f.h>
@@ -17,6 +19,8 @@ public:
     std::vector<Vector3f> normals;
     std::vector<Vector2f> texCoords;
     std::vector<Vector3f> colors;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
 
     GLuint vao;
 };
