@@ -10,10 +10,10 @@ uniform bool hasTexCoords;
 uniform vec3 viewPos;
 
 
-vec3 lightPos = vec3(0.0, 10.0, 0.0);
+vec3 lightPos = vec3(0.0, 0.0, 5.0);
 vec3 lightColor = vec3(1.0, 1.0, 1.0);
-float lightPower = 100.0;
-vec3 ambientColor = vec3(0.1, 0.0, 0.0);
+float lightPower = 20.0;
+vec3 ambientColor = vec3(0.1, 0.1, 0.1);
 vec3 diffuseColor = vec3(0.5, 0.0, 0.0);
 vec3 specColor = vec3(1.0, 1.0, 1.0);
 float shininess = 16.0;
@@ -30,12 +30,15 @@ out vec4 fragColor;
 void main()
 {
     vec3 normal = normalize(passNormal);
-    
-    vec3 color = vec3(0, 0.5, 0);
+    ambientColor = vec3(0, 0, 0);
+    diffuseColor = vec3(0, 0, 0);
+
     if (hasTexCoords)
-        color = texture(colorMap, passTexCoord).rgb;
+        ambientColor = texture(colorMap, passTexCoord).rgb;
+        diffuseColor = texture(colorMap, passTexCoord).rgb;
     if (hasColor)
-        color = passColor;
+        ambientColor = passColor;
+        diffuseColor = texture(colorMap, passTexCoord).rgb;
     
     // Blinn Phong Shading
     vec3 lightDir = lightPos - passPosition;
@@ -57,7 +60,7 @@ void main()
         
     }
     
-    vec3 colorLinear = color +
+    vec3 colorLinear = ambientColor +
     diffuseColor * lambertian * lightColor * lightPower / distance +
     specColor * specular * lightColor * lightPower / distance;
     // apply gamma correction (assume ambientColor, diffuseColor and specColor
@@ -68,6 +71,6 @@ void main()
     
 
     // Output color value, change from (1, 0, 0) to something else
-    fragColor = vec4(color
+    fragColor = vec4(colorLinear
                      .xyz, 1.0);
 }
