@@ -86,11 +86,15 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     modelMatrix.rotate(rotation);
     modelMatrix.scale(scale);
 
+	
     shader.uniformMatrix4f("modelMatrix", modelMatrix);
     shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
     shader.uniform1i("hasColor", model.colors.size() > 0);
 
-
+	//glActiveTexture(1);
+	//glUniform1i(0, 1);
+	glBindTexture(GL_TEXTURE_2D, 1);
+	shader.uniform1i("colorMap", 0);
 
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
@@ -121,13 +125,17 @@ public:
 //        model = loadModel("Resources/cube_normals.obj");
         mapWidth = 5;
         mapDepth = 5;
-        map = loadMap(mapWidth, mapDepth, 100);
+        //map = loadMap(mapWidth, mapDepth, 100);
         //cube1 = loadCube();
         //cube2 = loadCube();
         //dragon = loadModel("Resources/dragon.obj");
         //davidHead = loadModel("Resources/DavidHeadCleanMax.obj");
 		earth = loadModel("Resources/gijsEarth.obj");
 		earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
+		std::cout << earth_texture.handle << std::endl;
+		hangar = loadModel("Resources/Hangar2.obj");
+		hangar_roof = loadImage("Resources/" + hangar.materials[0].diffuse_texname);
+		std::cout << hangar_roof.handle << std::endl;
 
         window.addKeyListener(this);
         window.addMouseMoveListener(this);
@@ -205,6 +213,8 @@ public:
             //drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
 
 			drawModel(defaultShader, earth, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, rotateAngle, 0), .5f);
+
+			drawModel(defaultShader, hangar, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, 0, 0), .5f);
             //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
             //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
             
@@ -339,7 +349,9 @@ private:
     Model dragon;
     Model davidHead;
 	Model earth;
+	Model hangar;
 	Image earth_texture;
+	Image hangar_roof;
     
     
     GLint m_viewport[4];

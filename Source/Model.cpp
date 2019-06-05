@@ -65,7 +65,7 @@ Model loadModel(std::string path)
                 tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
                 model.normals.push_back(Vector3f(nx, ny, nz));
 
-                if (attrib.texcoords.size() > 0) {
+                if (attrib.texcoords.size() > 0 && idx.texcoord_index >= 0) {
                     tinyobj::real_t tx = attrib.texcoords[2 * idx.texcoord_index + 0];
                     tinyobj::real_t ty = attrib.texcoords[2 * idx.texcoord_index + 1];
                     model.texCoords.push_back(Vector2f(tx, 1-ty));
