@@ -8,7 +8,7 @@ layout(location = 0) out vec4 outColor;
 
 // Interpolated output data from vertex shader
 in vec3 fragPos;    // World-space position
-in vec3 outTexCoords;
+in vec2 outTexCoords;
 
 
 void main() {
@@ -25,7 +25,11 @@ void main() {
 //    if (outTexCoords.y < 0.5f){
 //        outColor = vec4(0.f, 1.f, 0.f, 1.f);
 //    }
-    outColor = vec4(vec3(outTexCoords.x), 1.0f);
+    
+    float linearDepth = color * 2 - 1;
+    linearDepth = 2 * 0.1 * 100 / (100+0.1 - linearDepth * (100-0.1));
+    
+    outColor = vec4(linearDepth/10, 0, 0, 1.0f);
     
     //outColor = vec4(vec3(color), 1.0);
     

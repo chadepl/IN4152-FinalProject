@@ -107,6 +107,7 @@ public:
 		window.create("Final Project", 1024, 1024);
         
         // Viewport for camera calculations
+        glViewport(0, 0, WIDTH, HEIGHT);
         glGetIntegerv(GL_VIEWPORT, m_viewport);
 		
 		// Capture mouse pointer to look around (sneakily get real glfwWindow)
@@ -120,20 +121,20 @@ public:
         
         game.hangarPosition = Vector3f(0.f, 1.f, 0.f);
         game.hangarScalingFactor = 1.f;
-        
-        game.mapCenter = Vector3f(0.f, 0.f, 0.f);
+        game.turboModeOn = false;
         
         // -- light
         
         light.position = Vector3f(3.f, 20.f, 8.f);
-        light.viewMatrix = lookAtMatrix(light.position, Vector3f(3.5f, 2.f, -3.f), Vector3f(0.f, 1.f, 0.f));
-        light.projectionMatrix = projectionProjectiveMatrix(60, m_viewport[2]/m_viewport[3], 0.1, 100); // TODO: fix aspect
+        light.viewMatrix = lookAtMatrix(light.position, game.characterPosition, Vector3f(0.f, 1.f, 0.f));
+        light.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
         
         // LOADING MODELS
         
-        mapWidth = 5;
-        mapDepth = 5;
-        //map = loadMap(mapWidth, mapDepth, 100);
+        // map
+        map.resolution = 100;
+        map.center = Vector3f(game.characterPosition.x, 0.f, game.characterPosition.z);
+        map.model = makeMap(map.center, 100, 5.f, 50.f);
 
 		//spacecraft = loadModel("Resources/spacecraft.obj");
         spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
@@ -209,7 +210,7 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         
         // Set interpolation for texture sampling (GL_NEAREST for no interpolation)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // TODO: NEAREST
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         
         //// Create framebuffer for extra texture
@@ -218,6 +219,8 @@ public:
         //// Set shadow texure as depth buffer for this framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texShadow, 0);
+        glClearDepth(1.0f);
+        glClear(GL_DEPTH_BUFFER_BIT);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
     }
@@ -233,61 +236,29 @@ public:
             
             updateGameState();
             
-            ////////// Shadow mapping
-//            {
-//                // Bind the off-screen framebuffer
-//                glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-//
-//                // Clear the shadow map and set needed options
-//                glClearDepth(1.0f);
-//                glClear(GL_DEPTH_BUFFER_BIT);
-//                glEnable(GL_DEPTH_TEST);
-//
-//                // Bind the shader
-//                shadowShader.bind();
-//
-//                // Set viewport size
-//                glViewport(0, 0, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
-//
-//                // Execute draw command
-//                //glDrawArrays(GL_TRIANGLES, 0, vertices.size());
-//                // the model matrix comes from drawing the model
-//
-//                // .... HERE YOU MUST ADD THE CORRECT UNIFORMS FOR RENDERING THE SHADOW MAP
-//                shadowShader.uniformMatrix4f("projMatrix", light.projectionMatrix);
-//                shadowShader.uniformMatrix4f("viewMatrix", light.viewMatrix);
-//
-//                // This includes the binding and drawing
-//                drawModel(defaultShader, earth, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, rotateAngle, 0), .5f);
-//
-//                // Unbind the off-screen framebuffer
-//                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-//            }
-            
+            drawScene(true);
             
             drawScene(false);
             
-			rotateAngle = rotateAngle + 0.25f;
-            
-            
             // TESTING
-//            glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
-//            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            
+            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 //            testShader.bind();
+//            glViewport(0, 0, WIDTH * 2, HEIGHT *2);
+//            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 //            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//            
+//
 //            // Bind the shadow map to texture slot 0
-//            texture_unit = 0;
-//            testShader.uniform1i("texShadow", 0);
+//            testShader.uniform1i("texShadow", 5);
 //            //glActiveTexture(GL_TEXTURE0 + texture_unit);
 //            //glBindTexture(GL_TEXTURE_2D, testingQuad_tex.handle);
-//            glBindTexture(GL_TEXTURE_2D, texShadow);
-//            
-//            
+//            //glBindTexture(GL_TEXTURE_2D, texShadow);
+//
+//
 //            Model quad = makeQuad();
 //            glBindVertexArray(quad.vao);
 //            glDrawArrays(GL_TRIANGLES, 0, quad.vertices.size());
-            
+//
             
             // Processes input and swaps the window buffer
             window.update();
@@ -297,73 +268,120 @@ public:
     // Method for drawing all the elements of the game
     void drawScene(bool forComputingShadows) {
         
-        defaultShader.bind();
-        
-        // Clear the screen
-        glClearColor(0.94f, 1.f, 1.f, 1.f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
-        // Bind the shadow map to texture slot 0
-        GLint texture_unit = 0;
-        glActiveTexture(GL_TEXTURE0 + texture_unit);
-        glBindTexture(GL_TEXTURE_2D, texShadow);
-        defaultShader.uniform1i("shadowMap", 1);
-        
-        
+        Matrix4f viewMatrix = lookAtMatrix(cameraPos, cameraPos + cameraTarget, cameraUp); // depends on processKeyboardInput();
         Matrix4f projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
-        // Matrix4f projMatrix = projectionOrthographicMatric(0.1, 5, -1, 1, 1, -1);
         
-        // depends on processKeyboardInput();
-        Matrix4f viewMatrix = lookAtMatrix(cameraPos, cameraPos + cameraTarget, cameraUp);
+        //ShaderProgram& shader = defaultShader;
+        if(!forComputingShadows){
+            defaultShader.bind();
+            
+            glViewport(0, 0, WIDTH * 2, HEIGHT *2);
+            
+            // Clear the screen
+            glClearColor(0.94f, 1.f, 1.f, 1.f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            
+            // Bind the shadow map to texture slot 0
+            GLint texture_unit = 5;
+            glActiveTexture(GL_TEXTURE0 + texture_unit);
+            glBindTexture(GL_TEXTURE_2D, texShadow);
+            defaultShader.uniform1i("shadowMap", texture_unit);
+            
+            defaultShader.uniformMatrix4f("projMatrix", projMatrix);
+            defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+            
+            defaultShader.uniformMatrix4f("light.projectionMatrix", light.projectionMatrix);
+            defaultShader.uniformMatrix4f("light.viewMatrix", light.viewMatrix);
+            defaultShader.uniform3f("light.position", light.position);
+            defaultShader.uniform3f("light.ambientColor", light.ambientColor);
+            defaultShader.uniform3f("light.diffuseColor", light.diffuseColor);
+            defaultShader.uniform3f("light.specularColor", light.specularColor);
+            defaultShader.uniform1f("light.lightPower", 20.f);
+            
+            defaultShader.uniform3f("viewPos", cameraPos);
+            defaultShader.uniform1i("turboModeOn", game.turboModeOn);
+            
+        } else {
+            
+            // Bind the off-screen framebuffer
+            glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+            
+            // Clear the shadow map and set needed options
+            glClearDepth(1.0f);
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            shadowShader.bind();
+            
+            // Set viewport size
+            glViewport(0, 0, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
+            
+            shadowShader.uniformMatrix4f("projMatrix", light.projectionMatrix);
+            shadowShader.uniformMatrix4f("viewMatrix", light.viewMatrix);
+            shadowShader.uniform3f("viewPos", light.position);
+            
+            //shader = shadowShader;
+            
+        }
         
+        if(!forComputingShadows){
+            // 1. Draw map
+            defaultShader.uniform1i("forTesting", 1); // REMOVE at the end
+            drawModel(defaultShader, map.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+            
+            
+            // 2. Draw hangar
+            // drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
+            
+            // 3. Draw spacecraft
+            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+            drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(0, 0, 0), game.characterScalingFactor);
+            
+            // 4. Draw moving planets
+            
+            
+            // 5. Draw arcs
+            
+            
+            // 6. Draw OTHER stuff
+                //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
+            
+            defaultShader.uniform1i("forTesting", 1); // REMOVE at the end
+            //drawModel(defaultShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
+            
+            defaultShader.uniform1i("forTesting", 1); // REMOVE at the end
+            //drawModel(defaultShader, lightCube, Vector3f(0.f, 15.f, 0.f));
+            
+            //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
+            //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
+        }
         
-        defaultShader.uniformMatrix4f("projMatrix", projMatrix);
-        defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+        if(forComputingShadows){
+            
+            // 1. Draw map
+            drawModel(shadowShader, map.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+            
+            // 2. Draw hangar
+            // drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
+            
+            // 3. Draw spacecraft
+            drawModel(shadowShader, spacecraft, game.characterPosition, Vector3f(0, 0, 0), game.characterScalingFactor);
+            
+            // 4. Draw moving planets
+            
+            // 5. Draw arcs
+            
+            // 6. Draw OTHER stuff
+            
+            //drawModel(shadowShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
+            
+            //drawModel(shadowShader, lightCube, Vector3f(0.f, 15.f, 0.f));
+            
+            //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
+            //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
+        }
         
-        defaultShader.uniformMatrix4f("light.projectionMatrix", light.projectionMatrix);
-        defaultShader.uniformMatrix4f("light.viewMatrix", light.viewMatrix);
-        defaultShader.uniform3f("light.position", light.position);
-        defaultShader.uniform3f("light.ambientColor", light.ambientColor);
-        defaultShader.uniform3f("light.diffuseColor", light.diffuseColor);
-        defaultShader.uniform3f("light.specularColor", light.specularColor);
-        defaultShader.uniform1f("light.lightPower", 20.f);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
-        defaultShader.uniform1i("forTesting", false);
-        
-        
-        
-        //defaultShader.uniform3f("viewPos", cameraPos);
-        //defaultShader.uniform3fv("viewPos", 3, &cameraPos);
-        
-        //            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
-        
-        //drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
-        //            drawModel(defaultShader, cube1, Vector3f(0.f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
-        //drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
-        
-//        drawModel(defaultShader, earth, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, rotateAngle, 0), game.characterScalingFactor);
-        
-//        defaultShader.uniform3f("material.ambientColor", 0.54f, 0.27f, 0.074f);
-//        defaultShader.uniform3f("material.diffuseColor", 0.62f, 0.32f, 0.17f);
-//        defaultShader.uniform3f("material.specularColor", 1.f, 0.f, 0.f);
-//        defaultShader.uniform1f("material.shininess", 20.f);
-//        drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
-        
-        defaultShader.uniform3f("viewPos", cameraPos);
-        defaultShader.uniform1i("forTesting", 0);
-        
-        drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(0, 0, 0), game.characterScalingFactor);
-        
-        defaultShader.uniform1i("forTesting", 1);
-        
-        drawModel(defaultShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
-        
-        defaultShader.uniform1i("forTesting", 1);
-        
-        drawModel(defaultShader, lightCube, Vector3f(0.f, 15.f, 0.f));
-        
-        //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
-        //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
     }
     
     // Method for updating the game state after each interaction
@@ -372,6 +390,11 @@ public:
         light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
         light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
         light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
+        
+        if(false){ // distance between player and center of the map            
+            map.model = makeMap(map.center, 100, 1.f, 1.f);
+        }
+        
         
     }
 
@@ -471,6 +494,8 @@ public:
 
 private:
     Window window;
+    const int WIDTH = 1024;
+    const int HEIGHT = 1024;
     
     // Game state
     struct Game {
@@ -483,9 +508,27 @@ private:
         Vector3f hangarPosition;
         float hangarScalingFactor;
         
-        Vector3f mapCenter;
+        bool turboModeOn;
         
     } game;
+    
+    // Computed in a square from 0 to 1
+    // Use world coordinates to compare it to objects
+    struct Map {
+        int resolution;
+        Vector3f center;
+        Model model;
+    } map;
+    
+    // Light
+    struct Light {
+        Vector3f position;
+        Matrix4f viewMatrix;
+        Matrix4f projectionMatrix;
+        Vector3f ambientColor;
+        Vector3f diffuseColor;
+        Vector3f specularColor;
+    } light;
 
     // Shader for default rendering and for depth rendering
     ShaderProgram defaultShader;
@@ -507,8 +550,7 @@ private:
 	float pitch, yaw = 0.f;
     
     // Terrain
-    Model map;
-    double mapWidth, mapDepth;
+    
     Model sphere;
     Model dragon;
     Model davidHead;
@@ -528,16 +570,6 @@ private:
     Model testingQuad;
     Image testingQuad_tex;
     Model lightCube;
-    
-    // Light
-    struct Light {
-        Vector3f position;
-        Matrix4f viewMatrix;
-        Matrix4f projectionMatrix;
-        Vector3f ambientColor;
-        Vector3f diffuseColor;
-        Vector3f specularColor;
-    } light;
     
     // Shadow mapping
     const int SHADOWTEX_WIDTH  = 1024;

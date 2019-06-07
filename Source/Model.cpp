@@ -273,16 +273,17 @@ float getNoiseValue(noise::module::Perlin perlinGenerator, float posX, float pos
 }
 
 
-// Loads map
+// Makes map
 // Resolution refers to the number of squares (x2 number of triangles) per side
-Model loadMap(float width, float depth, int resolution)
+// Maps is always generated as a square of size 1
+Model makeMap(Vector3f center, int resolution, float heightMult, float size)
 {
     
     Model model;
     srand(time(0));
     
-    float stepX = (float) width/resolution;
-    float stepZ = (float) depth/resolution;
+    float stepX = (float) size/resolution;
+    float stepZ = (float) size/resolution;
 
     // Initialize noise
     noise::module::Perlin myModule;
@@ -290,22 +291,22 @@ Model loadMap(float width, float depth, int resolution)
     for (int i = 0; i < resolution; i++) {
         for (int j = 0; j < resolution; j++) {
             
-            float pos1x = i * stepX;
-            float pos2x = (i + 1) * stepX;
+            float pos1x = (center.x - size/2) + i * stepX;
+            float pos2x = (center.x - size/2) + ((i + 1) * stepX);
             
-            float pos1z = j * stepZ;
-            float pos2z = (j + 1) * stepZ;
+            float pos1z = (center.z - size/2) + j * stepZ;
+            float pos2z = (center.z - size/2) + ((j + 1) * stepZ);
             
-            float height11 = getNoiseValue(myModule, pos1x, pos1z);
+            float height11 = heightMult * getNoiseValue(myModule, pos1x, pos1z);
             Vector3f point11 = Vector3f(pos1x, height11, pos1z);
             
-            float height12 = getNoiseValue(myModule, pos1x, pos2z);
+            float height12 = heightMult * getNoiseValue(myModule, pos1x, pos2z);
             Vector3f point12 = Vector3f(pos1x, height12, pos2z);
             
-            float height21 = getNoiseValue(myModule, pos2x, pos1z);
+            float height21 = heightMult * getNoiseValue(myModule, pos2x, pos1z);
             Vector3f point21 = Vector3f(pos2x, height21, pos1z);
             
-            float height22 = getNoiseValue(myModule, pos2x, pos2z);
+            float height22 = heightMult * getNoiseValue(myModule, pos2x, pos2z);
             Vector3f point22 = Vector3f(pos2x, height22, pos2z);
             
             Vector3f P, Q;
@@ -319,15 +320,27 @@ Model loadMap(float width, float depth, int resolution)
             P = point21 - point11;
             Q = point22 - point21;
             
-            normalVec = cross(P, Q);
+            normalVec = -cross(P, Q);
             
             model.normals.push_back(normalVec);
             model.normals.push_back(normalVec);
             model.normals.push_back(normalVec);
             
-            model.colors.push_back(getColor(height11));
-            model.colors.push_back(getColor(height21));
-            model.colors.push_back(getColor(height22));
+            model.diffuseColors.push_back(getColor(height11/heightMult));
+            model.diffuseColors.push_back(getColor(height21/heightMult));
+            model.diffuseColors.push_back(getColor(height22/heightMult));
+            
+            model.ambientColors.push_back(getColor(height11/heightMult));
+            model.ambientColors.push_back(getColor(height21/heightMult));
+            model.ambientColors.push_back(getColor(height22/heightMult));
+            
+            model.specularColors.push_back(getColor(height11/heightMult));
+            model.specularColors.push_back(getColor(height21/heightMult));
+            model.specularColors.push_back(getColor(height22/heightMult));
+            
+            model.shininessValues.push_back(20.f);
+            model.shininessValues.push_back(20.f);
+            model.shininessValues.push_back(20.f);
             
             /*** Second triangle ***/
             model.vertices.push_back(point11);
@@ -337,15 +350,27 @@ Model loadMap(float width, float depth, int resolution)
             P = point12 - point22;
             Q = point11 - point12;
             
-            normalVec = cross(P, Q);
+            normalVec = -cross(P, Q);
             
             model.normals.push_back(normalVec);
             model.normals.push_back(normalVec);
             model.normals.push_back(normalVec);
             
-            model.colors.push_back(getColor(height11));
-            model.colors.push_back(getColor(height22));
-            model.colors.push_back(getColor(height12));
+            model.diffuseColors.push_back(getColor(height11/heightMult));
+            model.diffuseColors.push_back(getColor(height22/heightMult));
+            model.diffuseColors.push_back(getColor(height12/heightMult));
+            
+            model.ambientColors.push_back(getColor(height11/heightMult));
+            model.ambientColors.push_back(getColor(height22/heightMult));
+            model.ambientColors.push_back(getColor(height12/heightMult));
+            
+            model.specularColors.push_back(getColor(height11/heightMult));
+            model.specularColors.push_back(getColor(height22/heightMult));
+            model.specularColors.push_back(getColor(height12/heightMult));
+            
+            model.shininessValues.push_back(20.f);
+            model.shininessValues.push_back(20.f);
+            model.shininessValues.push_back(20.f);
         }
     }
     
@@ -366,22 +391,41 @@ Model loadMap(float width, float depth, int resolution)
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
     
+    GLuint diffuse_bo;
+    glGenBuffers(1, &diffuse_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, diffuse_bo);
+    glBufferData(GL_ARRAY_BUFFER, model.diffuseColors.size() * sizeof(Vector3f), model.diffuseColors.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(2);
+    GLuint ambient_bo;
+    glGenBuffers(1, &ambient_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, ambient_bo);
+    glBufferData(GL_ARRAY_BUFFER, model.ambientColors.size() * sizeof(Vector3f), model.ambientColors.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(3);
+    GLuint specular_bo;
+    glGenBuffers(1, &specular_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, specular_bo);
+    glBufferData(GL_ARRAY_BUFFER, model.specularColors.size() * sizeof(Vector3f), model.specularColors.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(4);
+    GLuint shininess_bo;
+    glGenBuffers(1, &shininess_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, shininess_bo);
+    glBufferData(GL_ARRAY_BUFFER, model.shininessValues.size() * sizeof(Vector3f), model.shininessValues.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(5);
+    
+    
     if (model.texCoords.size() > 0)
     {
         GLuint tbo;
         glGenBuffers(1, &tbo);
         glBindBuffer(GL_ARRAY_BUFFER, tbo);
         glBufferData(GL_ARRAY_BUFFER, model.texCoords.size() * sizeof(Vector2f), model.texCoords.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(6, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(6);
     }
-    
-    GLuint cbo;
-    glGenBuffers(1, &cbo);
-    glBindBuffer(GL_ARRAY_BUFFER, cbo);
-    glBufferData(GL_ARRAY_BUFFER, model.colors.size() * sizeof(Vector3f), model.colors.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(3);
     
     return model;
 }

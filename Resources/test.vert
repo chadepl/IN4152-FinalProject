@@ -3,11 +3,11 @@
 
 // Per-vertex attributes
 layout(location = 0) in vec3 pos; // World-space position
-layout(location = 1) in vec3 texCoords;
+layout(location = 1) in vec2 texCoords;
 
 // Data to pass to fragment shader
 out vec3 fragPos;
-out vec3 outTexCoords;
+out vec2 outTexCoords;
 
 void main() {
     // Transform 3D position into on-screen position

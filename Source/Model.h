@@ -32,7 +32,7 @@ public:
 
 Model loadModel(std::string path);
 Model loadModelWithMaterials(std::string path);
-Model loadMap(float width, float depth, int resolution);
+Model makeMap(Vector3f center, int resolution, float heightMult, float size);
 Model loadCube();
 Model makeQuad();
 Vector3f getColor(float height);
