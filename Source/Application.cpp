@@ -44,22 +44,6 @@ Matrix4f projectionProjectiveMatrix(float fov, float aspect, float nnear, float 
     return projectionMatrix;
 }
 
-Matrix4f projectionOrthographicMatric(float nnear, float ffar, float left, float right, float top, float bottom){
-    
-    Matrix4f projectionMatrix;
-    
-    projectionMatrix[0] = 2/(right-left);
-    projectionMatrix[5] = 2/(top-bottom);
-    projectionMatrix[10] = -2/(ffar - nnear);
-    projectionMatrix[12] = -(right+left)/(right-left);
-    projectionMatrix[13] = -(top+bottom)/(top-bottom);
-    projectionMatrix[14] = -(ffar + nnear)/(ffar - nnear);
-    
-    return projectionMatrix;
-    
-}
-
-
 // Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
 Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up)
 {
@@ -92,8 +76,7 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 	
     shader.uniformMatrix4f("modelMatrix", modelMatrix);
     shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
-    shader.uniform1i("hasColor", model.colors.size() > 0);
-
+    
 	//glActiveTexture(1);
 	//glUniform1i(0, 1);
 	if (model.texCoords.size() > 0) {
@@ -102,8 +85,6 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 		// Bind texture of the model
 		glBindTexture(GL_TEXTURE_2D, textureHandles[model.materials[0].diffuse_texname]);
 	}
-	
-	shader.uniform1i("colorMap", 0);
 
 	
     glBindVertexArray(model.vao);
@@ -116,8 +97,8 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 class Application : KeyListener, MouseMoveListener, MouseClickListener
 {
 public:
-	Vector3f cameraPos = Vector3f(0.f, 1.f, 3.f);
-	Vector3f cameraTarget = Vector3f(0, 0, -1.0f);
+    Vector3f cameraPos = Vector3f(0.f, 10.f, -8.f); // before: 0.f, 1.f, 3.f
+	Vector3f cameraTarget = Vector3f(0, 0, 1.0f); // 0, 0, -1.0f
 	Vector3f cameraUp = Vector3f(0.f, 1.f, 0.f);
 
     void init()
@@ -126,31 +107,54 @@ public:
 		window.create("Final Project", 1024, 1024);
         
         // Viewport for camera calculations
-        glGetIntegerv( GL_VIEWPORT, m_viewport);
+        glGetIntegerv(GL_VIEWPORT, m_viewport);
 		
 		// Capture mouse pointer to look around (sneakily get real glfwWindow)
 		glfwSetInputMode(window.windowPointer(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-				//Load cube model
-//        model = loadModel("Resources/cube_normals.obj");
+        
+        // INIT GAME STATE
+        
+        game.characterPosition = Vector3f(0.f, 10.f, 0.f); //3.5f, 2.f, -3.f
+        game.characterScalingFactor = .5f;
+        game.characterTurboModeOn = false;
+        
+        game.hangarPosition = Vector3f(0.f, 1.f, 0.f);
+        game.hangarScalingFactor = 1.f;
+        
+        game.mapCenter = Vector3f(0.f, 0.f, 0.f);
+        
+        // -- light
+        
+        light.position = Vector3f(3.f, 20.f, 8.f);
+        light.viewMatrix = lookAtMatrix(light.position, Vector3f(3.5f, 2.f, -3.f), Vector3f(0.f, 1.f, 0.f));
+        light.projectionMatrix = projectionProjectiveMatrix(60, m_viewport[2]/m_viewport[3], 0.1, 100); // TODO: fix aspect
+        
+        // LOADING MODELS
+        
         mapWidth = 5;
         mapDepth = 5;
         //map = loadMap(mapWidth, mapDepth, 100);
-        //cube1 = loadCube();
-        //cube2 = loadCube();
-        //dragon = loadModel("Resources/dragon.obj");
-        //davidHead = loadModel("Resources/DavidHeadCleanMax.obj");
 
-		spacecraft = loadModel("Resources/spacecraft.obj");
-		earth = loadModel("Resources/gijsEarth.obj");
-		earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
-		std::cout << earth_texture.handle << std::endl;
-		hangar = loadModel("Resources/Hangar2.obj");
-		hangar_roof = loadImage("Resources/" + hangar.materials[0].diffuse_texname);
-		std::cout << hangar_roof.handle << std::endl;
+		//spacecraft = loadModel("Resources/spacecraft.obj");
+        spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
+        
+        earth = loadModel("Resources/gijsEarth.obj");
+        earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
+        std::cout << earth_texture.handle << std::endl;
+        
+        hangar = loadModel("Resources/Hangar2.obj");
+        hangar_roof = loadImage("Resources/" + hangar.materials[0].diffuse_texname);
+        std::cout << hangar_roof.handle << std::endl;
 
 		textureHandles.insert(std::pair<std::string, int>(earth.materials[0].diffuse_texname, earth_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(hangar.materials[0].diffuse_texname, hangar_roof.handle));
+        
+        // testing models
+        testingQuad = makeQuad();
+        testingQuad_tex = loadImage("Resources/earth-square.jpg");
+        lightCube = loadCube();//loadModel("Resources/cube.obj");
+        
+        /////
 
         window.addKeyListener(this);
         window.addMouseMoveListener(this);
@@ -164,10 +168,15 @@ public:
 
             shadowShader.create();
             shadowShader.addShader(VERTEX, "Resources/shadow.vert");
+            shadowShader.addShader(FRAGMENT, "Resources/shadow.frag");
             shadowShader.build();
 
             // Any new shaders can be added below in similar fashion
             // ....
+            testShader.create();
+            testShader.addShader(VERTEX, "Resources/test.vert");
+            testShader.addShader(FRAGMENT, "Resources/test.frag");
+            testShader.build();
         }
         catch (ShaderLoadingException e)
         {
@@ -177,8 +186,8 @@ public:
         // Correspond the OpenGL texture units 0 and 1 with the
         // colorMap and shadowMap uniforms in the shader
         defaultShader.bind();
-        defaultShader.uniform1i("colorMap", 0);
-        defaultShader.uniform1i("shadowMap", 1);
+        //defaultShader.uniform1i("colorMap", 0);
+        //defaultShader.uniform1i("shadowMap", 1);
 
         // Upload the projection matrix once, if it doesn't change
         // during the game we don't need to reupload it
@@ -186,6 +195,31 @@ public:
 
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        
+        
+        //////////////////// SHADOW MAP
+        //// Create Shadow Texture
+        glGenTextures(1, &texShadow);
+        glBindTexture(GL_TEXTURE_2D, texShadow);
+        
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        
+        // Set behaviour for when texture coordinates are outside the [0, 1] range
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        
+        // Set interpolation for texture sampling (GL_NEAREST for no interpolation)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        
+        //// Create framebuffer for extra texture
+        glGenFramebuffers(1, &framebuffer);
+        
+        //// Set shadow texure as depth buffer for this framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texShadow, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
     }
 
     void update()
@@ -194,51 +228,151 @@ public:
         // Put your real-time logic and rendering in here
         while (!window.shouldClose())
         {
-            defaultShader.bind();
-
-            // Clear the screen
-            glClearColor(1.f, 1.f, 1.f, 1.f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            // ...
-
-//            drawModel(defaultShader, model, Vector3f(0.f, 0.f, 0.f), Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 0.2f);
             
-
+            processKeyboardInput();
             
-            Matrix4f projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
-           // Matrix4f projMatrix = projectionOrthographicMatric(0.1, 5, -1, 1, 1, -1);
+            updateGameState();
             
-			processKeyboardInput();
-            Matrix4f viewMatrix = lookAtMatrix(cameraPos, cameraPos + cameraTarget, cameraUp);
+            ////////// Shadow mapping
+//            {
+//                // Bind the off-screen framebuffer
+//                glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+//
+//                // Clear the shadow map and set needed options
+//                glClearDepth(1.0f);
+//                glClear(GL_DEPTH_BUFFER_BIT);
+//                glEnable(GL_DEPTH_TEST);
+//
+//                // Bind the shader
+//                shadowShader.bind();
+//
+//                // Set viewport size
+//                glViewport(0, 0, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
+//
+//                // Execute draw command
+//                //glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+//                // the model matrix comes from drawing the model
+//
+//                // .... HERE YOU MUST ADD THE CORRECT UNIFORMS FOR RENDERING THE SHADOW MAP
+//                shadowShader.uniformMatrix4f("projMatrix", light.projectionMatrix);
+//                shadowShader.uniformMatrix4f("viewMatrix", light.viewMatrix);
+//
+//                // This includes the binding and drawing
+//                drawModel(defaultShader, earth, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, rotateAngle, 0), .5f);
+//
+//                // Unbind the off-screen framebuffer
+//                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+//            }
             
-			
-            defaultShader.uniformMatrix4f("projMatrix", projMatrix);
-            defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
             
-			Vector3f lightPos = Vector3f(0.f, 10.f, 0.f);
-
-            //defaultShader.uniform3f("viewPos", cameraPos);
-            //defaultShader.uniform3fv("viewPos", 3, &cameraPos);
-            
-//            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
-            
-            //drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
-//            drawModel(defaultShader, cube1, Vector3f(0.f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
-            //drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
-
-			drawModel(defaultShader, earth, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, rotateAngle, 0), .5f);
-
-			drawModel(defaultShader, hangar, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, 0, 0), .5f);
-			drawModel(defaultShader, spacecraft, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, 0, 0), .5f);
-
-            //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
-            //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
+            drawScene(false);
             
 			rotateAngle = rotateAngle + 0.25f;
+            
+            
+            // TESTING
+//            glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
+//            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//            testShader.bind();
+//            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//            
+//            // Bind the shadow map to texture slot 0
+//            texture_unit = 0;
+//            testShader.uniform1i("texShadow", 0);
+//            //glActiveTexture(GL_TEXTURE0 + texture_unit);
+//            //glBindTexture(GL_TEXTURE_2D, testingQuad_tex.handle);
+//            glBindTexture(GL_TEXTURE_2D, texShadow);
+//            
+//            
+//            Model quad = makeQuad();
+//            glBindVertexArray(quad.vao);
+//            glDrawArrays(GL_TRIANGLES, 0, quad.vertices.size());
+            
+            
             // Processes input and swaps the window buffer
             window.update();
         }
+    }
+    
+    // Method for drawing all the elements of the game
+    void drawScene(bool forComputingShadows) {
+        
+        defaultShader.bind();
+        
+        // Clear the screen
+        glClearColor(0.94f, 1.f, 1.f, 1.f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        // Bind the shadow map to texture slot 0
+        GLint texture_unit = 0;
+        glActiveTexture(GL_TEXTURE0 + texture_unit);
+        glBindTexture(GL_TEXTURE_2D, texShadow);
+        defaultShader.uniform1i("shadowMap", 1);
+        
+        
+        Matrix4f projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
+        // Matrix4f projMatrix = projectionOrthographicMatric(0.1, 5, -1, 1, 1, -1);
+        
+        // depends on processKeyboardInput();
+        Matrix4f viewMatrix = lookAtMatrix(cameraPos, cameraPos + cameraTarget, cameraUp);
+        
+        
+        defaultShader.uniformMatrix4f("projMatrix", projMatrix);
+        defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+        
+        defaultShader.uniformMatrix4f("light.projectionMatrix", light.projectionMatrix);
+        defaultShader.uniformMatrix4f("light.viewMatrix", light.viewMatrix);
+        defaultShader.uniform3f("light.position", light.position);
+        defaultShader.uniform3f("light.ambientColor", light.ambientColor);
+        defaultShader.uniform3f("light.diffuseColor", light.diffuseColor);
+        defaultShader.uniform3f("light.specularColor", light.specularColor);
+        defaultShader.uniform1f("light.lightPower", 20.f);
+        
+        defaultShader.uniform1i("forTesting", false);
+        
+        
+        
+        //defaultShader.uniform3f("viewPos", cameraPos);
+        //defaultShader.uniform3fv("viewPos", 3, &cameraPos);
+        
+        //            drawModel(defaultShader, map, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+        
+        //drawModel(defaultShader, map, Vector3f(-mapWidth/2, 0.f, -mapDepth/2),Vector3f(0, 0, 0), 1.f);
+        //            drawModel(defaultShader, cube1, Vector3f(0.f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
+        //drawModel(defaultShader, cube2, Vector3f(1.5f, 0.f, -2.f),Vector3f(rotateAngle, rotateAngle, 0), 1.f);
+        
+//        drawModel(defaultShader, earth, Vector3f(3.5f, 2.f, -3.f), Vector3f(0, rotateAngle, 0), game.characterScalingFactor);
+        
+//        defaultShader.uniform3f("material.ambientColor", 0.54f, 0.27f, 0.074f);
+//        defaultShader.uniform3f("material.diffuseColor", 0.62f, 0.32f, 0.17f);
+//        defaultShader.uniform3f("material.specularColor", 1.f, 0.f, 0.f);
+//        defaultShader.uniform1f("material.shininess", 20.f);
+//        drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
+        
+        defaultShader.uniform3f("viewPos", cameraPos);
+        defaultShader.uniform1i("forTesting", 0);
+        
+        drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(0, 0, 0), game.characterScalingFactor);
+        
+        defaultShader.uniform1i("forTesting", 1);
+        
+        drawModel(defaultShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
+        
+        defaultShader.uniform1i("forTesting", 1);
+        
+        drawModel(defaultShader, lightCube, Vector3f(0.f, 15.f, 0.f));
+        
+        //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
+        //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
+    }
+    
+    // Method for updating the game state after each interaction
+    void updateGameState(){
+        
+        light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
+        light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
+        light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
+        
     }
 
 	// Apply camera transformations according to keyboard input
@@ -337,9 +471,25 @@ public:
 
 private:
     Window window;
+    
+    // Game state
+    struct Game {
+        
+        bool characterTurboModeOn;
+        
+        Vector3f characterPosition;
+        float characterScalingFactor;
+        
+        Vector3f hangarPosition;
+        float hangarScalingFactor;
+        
+        Vector3f mapCenter;
+        
+    } game;
 
     // Shader for default rendering and for depth rendering
     ShaderProgram defaultShader;
+    ShaderProgram testShader;
     ShaderProgram shadowShader;
 
     // Projection and view matrices for you to fill in and use
@@ -359,9 +509,6 @@ private:
     // Terrain
     Model map;
     double mapWidth, mapDepth;
-    Model cube1;
-    Model cube2;
-    Model cubeNormals;
     Model sphere;
     Model dragon;
     Model davidHead;
@@ -373,6 +520,30 @@ private:
 	Image hangar_roof;
     
     GLint m_viewport[4];
+    
+    // Testing models
+    Model cube1;
+    Model cube2;
+    Model cubeNormals;
+    Model testingQuad;
+    Image testingQuad_tex;
+    Model lightCube;
+    
+    // Light
+    struct Light {
+        Vector3f position;
+        Matrix4f viewMatrix;
+        Matrix4f projectionMatrix;
+        Vector3f ambientColor;
+        Vector3f diffuseColor;
+        Vector3f specularColor;
+    } light;
+    
+    // Shadow mapping
+    const int SHADOWTEX_WIDTH  = 1024;
+    const int SHADOWTEX_HEIGHT = 1024;
+    GLuint texShadow;
+    GLuint framebuffer;
 };
 
 int main()

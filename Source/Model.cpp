@@ -9,7 +9,153 @@
 #include <ctime>    // For time()
 #include <cstdlib>  // For srand() and rand()
 
+
+#include <array>
+#include <vector>
+
 #include <noise/noise.h>
+
+Model loadModelWithMaterials(std::string path)
+{
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    
+    std::string err;
+    
+    std::ifstream ifs(path.c_str());
+    
+    if (!ifs.is_open())
+    {
+        std::cerr << "Failed to find file: " << path << std::endl;
+        exit(1);
+    }
+    
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "Resources/");
+    
+    if (!err.empty()) {
+        std::cerr << err << std::endl;
+    }
+    
+    if (!ret) {
+        std::cerr << "Failed to load object: " << path << std::endl;
+        exit(1);
+    }
+    
+    Model model;
+    
+    if (attrib.normals.size() == 0)
+    {
+        std::cerr << "Model does not have normal vectors, please re-export with normals." << std::endl;
+    }
+    
+    // Loop over shapes
+    for (size_t s = 0; s < shapes.size(); s++) {
+        // Loop over faces(polygon)
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+            int fv = shapes[s].mesh.num_face_vertices[f];
+            
+            //if(materials.size() > 0) {
+                tinyobj::material_t mat = materials[shapes[s].mesh.material_ids[f]];
+                //std::cout << "Mesh - " << shapes[s].name << std::endl;
+                //std::cout << "Diffuse: (" << mat.diffuse[0] << ", " << mat.diffuse[1] << ", " << mat.diffuse[2] << ") " << std::endl;
+            //}
+            // Materials to set
+            
+            
+            
+            // Loop over vertices in the face.
+            for (size_t v = 0; v < fv; v++) {
+                // access to vertex
+                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+                tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
+                tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+                tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+                model.vertices.push_back(Vector3f(vx, vy, vz));
+                tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
+                tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
+                tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
+                model.normals.push_back(Vector3f(nx, ny, nz));
+                
+                model.diffuseColors.push_back(Vector3f(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]));
+                model.ambientColors.push_back(Vector3f(mat.ambient[0], mat.ambient[1], mat.ambient[2]));
+                model.specularColors.push_back(Vector3f(mat.specular[0], mat.specular[1], mat.specular[2]));
+                model.shininessValues.push_back(mat.shininess);
+                
+                if (attrib.texcoords.size() > 0 && idx.texcoord_index >= 0) {
+                    tinyobj::real_t tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+                    tinyobj::real_t ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+                    model.texCoords.push_back(Vector2f(tx, 1-ty));
+                }
+                
+                // Optional: vertex colors
+                // tinyobj::real_t red = attrib.colors[3*idx.vertex_index+0];
+                // tinyobj::real_t green = attrib.colors[3*idx.vertex_index+1];
+                // tinyobj::real_t blue = attrib.colors[3*idx.vertex_index+2];
+            }
+            index_offset += fv;
+            
+            
+        }
+    }
+    
+    model.shapes = shapes;
+    model.materials = materials;
+    
+    glGenVertexArrays(1, &model.vao);
+    glBindVertexArray(model.vao);
+    
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, model.vertices.size() * sizeof(Vector3f), model.vertices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+    GLuint nbo;
+    glGenBuffers(1, &nbo);
+    glBindBuffer(GL_ARRAY_BUFFER, nbo);
+    glBufferData(GL_ARRAY_BUFFER, model.normals.size() * sizeof(Vector3f), model.normals.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+    GLuint diffuse_bo;
+    glGenBuffers(1, &diffuse_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, diffuse_bo);
+    glBufferData(GL_ARRAY_BUFFER, model.diffuseColors.size() * sizeof(Vector3f), model.diffuseColors.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(2);
+    GLuint ambient_bo;
+    glGenBuffers(1, &ambient_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, ambient_bo);
+    glBufferData(GL_ARRAY_BUFFER, model.ambientColors.size() * sizeof(Vector3f), model.ambientColors.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(3);
+    GLuint specular_bo;
+    glGenBuffers(1, &specular_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, specular_bo);
+    glBufferData(GL_ARRAY_BUFFER, model.specularColors.size() * sizeof(Vector3f), model.specularColors.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(4);
+    GLuint shininess_bo;
+    glGenBuffers(1, &shininess_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, shininess_bo);
+    glBufferData(GL_ARRAY_BUFFER, model.shininessValues.size() * sizeof(Vector3f), model.shininessValues.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(5);
+    
+    
+    if (model.texCoords.size() > 0)
+    {
+        GLuint tbo;
+        glGenBuffers(1, &tbo);
+        glBindBuffer(GL_ARRAY_BUFFER, tbo);
+        glBufferData(GL_ARRAY_BUFFER, model.texCoords.size() * sizeof(Vector2f), model.texCoords.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(6, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(6);
+    }
+    
+    return model;
+}
 
 Model loadModel(std::string path)
 {
@@ -261,70 +407,103 @@ Vector3f getColor(float e){
 Model loadCube(){
     
     Model cube;
+
     
-    Vector3f p1 = Vector3f(-0.5, -0.5, 0.5);
-    Vector3f p2 = Vector3f(0.5, -0.5, 0.5);
-    Vector3f p3 = Vector3f(0.5, 0.5, 0.5);
-    Vector3f p4 = Vector3f(-0.5, 0.5, 0.5);
-    Vector3f p5 = Vector3f(-0.5, -0.5, -0.5);
-    Vector3f p6 = Vector3f(0.5, -0.5, -0.5);
-    Vector3f p7 = Vector3f(0.5, 0.5, -0.5);
-    Vector3f p8 = Vector3f(-0.5, 0.5, -0.5);
-    Vector3f U, V;
+    cube.vertices.push_back(Vector3f(-0.5f, -0.5f, -0.5f)); cube.vertices.push_back(Vector3f(0.5f, -0.5f, -0.5f)); cube.vertices.push_back(Vector3f(0.5f,  0.5f, -0.5f));
+    cube.vertices.push_back(Vector3f(0.5f,  0.5f, -0.5f)); cube.vertices.push_back(Vector3f(-0.5f,  0.5f, -0.5f)); cube.vertices.push_back(Vector3f(-0.5f, -0.5f, -0.5f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, -1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, -1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, -1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, -1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, -1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, -1.0f));
+
     
-    cube.vertices.push_back(p1); cube.vertices.push_back(p3); cube.vertices.push_back(p4);
-    cube.vertices.push_back(p1); cube.vertices.push_back(p2); cube.vertices.push_back(p3);
-    U = p4 - p3; V = p3 - p1; cube.normals.push_back(cross(U, V));
-    U = p4 - p3; V = p3 - p1; cube.normals.push_back(cross(U, V));
-    U = p4 - p3; V = p3 - p1; cube.normals.push_back(cross(U, V));
-    U = p3 - p2; V = p2 - p1; cube.normals.push_back(cross(U, V));
-    U = p3 - p2; V = p2 - p1; cube.normals.push_back(cross(U, V));
-    U = p3 - p2; V = p2 - p1; cube.normals.push_back(cross(U, V));
+    cube.vertices.push_back(Vector3f(-0.5f, -0.5f,  0.5f)); cube.vertices.push_back(Vector3f(0.5f, -0.5f,  0.5f)); cube.vertices.push_back(Vector3f(0.5f,  0.5f,  0.5f));
+    cube.vertices.push_back(Vector3f(0.5f,  0.5f,  0.5f)); cube.vertices.push_back(Vector3f(-0.5f,  0.5f,  0.5f)); cube.vertices.push_back(Vector3f(-0.5f, -0.5f,  0.5f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, 1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, 1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, 1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, 1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, 1.0f));
+    cube.normals.push_back(Vector3f(0.0f,  0.0f, 1.0f));
     
-    cube.vertices.push_back(p2); cube.vertices.push_back(p7); cube.vertices.push_back(p3);
-    cube.vertices.push_back(p2); cube.vertices.push_back(p6); cube.vertices.push_back(p7);
-    U = p3 - p7; V = p7 - p2; cube.normals.push_back(cross(U, V));
-    U = p3 - p7; V = p7 - p2; cube.normals.push_back(cross(U, V));
-    U = p3 - p7; V = p7 - p2; cube.normals.push_back(cross(U, V));
-    U = p7 - p6; V = p6 - p2; cube.normals.push_back(cross(U, V));
-    U = p7 - p6; V = p6 - p2; cube.normals.push_back(cross(U, V));
-    U = p7 - p6; V = p6 - p2; cube.normals.push_back(cross(U, V));
+    cube.vertices.push_back(Vector3f(-0.5f,  0.5f,  0.5f)); cube.vertices.push_back(Vector3f(-0.5f,  0.5f, -0.5f)); cube.vertices.push_back(Vector3f( -0.5f, -0.5f, -0.5f));
+    cube.vertices.push_back(Vector3f(-0.5f, -0.5f, -0.5f)); cube.vertices.push_back(Vector3f(-0.5f, -0.5f,  0.5f)); cube.vertices.push_back(Vector3f(-0.5f,  0.5f,  0.5f));
+    cube.normals.push_back(Vector3f(-1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(-1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(-1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(-1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(-1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(-1.0f,  0.0f,  0.0f));
     
-    cube.vertices.push_back(p6); cube.vertices.push_back(p8); cube.vertices.push_back(p7);
-    cube.vertices.push_back(p6); cube.vertices.push_back(p5); cube.vertices.push_back(p8);
-    U = p7 - p8; V = p8 - p6; cube.normals.push_back(cross(U, V));
-    U = p7 - p8; V = p8 - p6; cube.normals.push_back(cross(U, V));
-    U = p7 - p8; V = p8 - p6; cube.normals.push_back(cross(U, V));
-    U = p8 - p5; V = p5 - p6; cube.normals.push_back(cross(U, V));
-    U = p8 - p5; V = p5 - p6; cube.normals.push_back(cross(U, V));
-    U = p8 - p5; V = p5 - p6; cube.normals.push_back(cross(U, V));
+    cube.vertices.push_back(Vector3f(0.5f,  0.5f,  0.5f)); cube.vertices.push_back(Vector3f(0.5f,  0.5f, -0.5f)); cube.vertices.push_back(Vector3f(0.5f, -0.5f, -0.5f));
+    cube.vertices.push_back(Vector3f(0.5f, -0.5f, -0.5f)); cube.vertices.push_back(Vector3f(0.5f, -0.5f,  0.5f)); cube.vertices.push_back(Vector3f(0.5f,  0.5f,  0.5f));
+    cube.normals.push_back(Vector3f(1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(1.0f,  0.0f,  0.0f));
+    cube.normals.push_back(Vector3f(1.0f,  0.0f,  0.0f));
     
-    cube.vertices.push_back(p5); cube.vertices.push_back(p4); cube.vertices.push_back(p8);
-    cube.vertices.push_back(p5); cube.vertices.push_back(p1); cube.vertices.push_back(p4);
-    U = p8 - p4; V = p4 - p5; cube.normals.push_back(cross(U, V));
-    U = p8 - p4; V = p4 - p5; cube.normals.push_back(cross(U, V));
-    U = p8 - p4; V = p4 - p5; cube.normals.push_back(cross(U, V));
-    U = p4 - p1; V = p1 - p5; cube.normals.push_back(cross(U, V));
-    U = p4 - p1; V = p1 - p5; cube.normals.push_back(cross(U, V));
-    U = p4 - p1; V = p1 - p5; cube.normals.push_back(cross(U, V));
+    cube.vertices.push_back(Vector3f(-0.5f, -0.5f, -0.5f)); cube.vertices.push_back(Vector3f(0.5f, -0.5f, -0.5f)); cube.vertices.push_back(Vector3f(0.5f, -0.5f,  0.5f));
+    cube.vertices.push_back(Vector3f(0.5f, -0.5f,  0.5f)); cube.vertices.push_back(Vector3f(-0.5f, -0.5f,  0.5f)); cube.vertices.push_back(Vector3f(-0.5f, -0.5f, -0.5f));
+    cube.normals.push_back(Vector3f(0.0f, -1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f, -1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f, -1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f, -1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f, -1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f, -1.0f,  0.0f));
     
-    cube.vertices.push_back(p4); cube.vertices.push_back(p7); cube.vertices.push_back(p8);
-    cube.vertices.push_back(p4); cube.vertices.push_back(p3); cube.vertices.push_back(p7);
-    U = p8 - p7; V = p7 - p4; cube.normals.push_back(cross(U, V));
-    U = p8 - p7; V = p7 - p4; cube.normals.push_back(cross(U, V));
-    U = p8 - p7; V = p7 - p4; cube.normals.push_back(cross(U, V));
-    U = p7 - p3; V = p3 - p4; cube.normals.push_back(cross(U, V));
-    U = p7 - p3; V = p3 - p4; cube.normals.push_back(cross(U, V));
-    U = p7 - p3; V = p3 - p4; cube.normals.push_back(cross(U, V));
+    cube.vertices.push_back(Vector3f(-0.5f,  0.5f, -0.5f)); cube.vertices.push_back(Vector3f(0.5f,  0.5f, -0.5f)); cube.vertices.push_back(Vector3f(0.5f,  0.5f,  0.5f));
+    cube.vertices.push_back(Vector3f(0.5f,  0.5f,  0.5f)); cube.vertices.push_back(Vector3f(-0.5f,  0.5f,  0.5f)); cube.vertices.push_back(Vector3f(-0.5f,  0.5f, -0.5f));
+    cube.normals.push_back(Vector3f(0.0f,  1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f,  1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f,  1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f,  1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f,  1.0f,  0.0f));
+    cube.normals.push_back(Vector3f(0.0f,  1.0f,  0.0f));
     
-    cube.vertices.push_back(p5); cube.vertices.push_back(p2); cube.vertices.push_back(p1);
-    cube.vertices.push_back(p5); cube.vertices.push_back(p6); cube.vertices.push_back(p2);
-    U = p1 - p2; V = p2 - p5; cube.normals.push_back(cross(U, V));
-    U = p1 - p2; V = p2 - p5; cube.normals.push_back(cross(U, V));
-    U = p1 - p2; V = p2 - p5; cube.normals.push_back(cross(U, V));
-    U = p2 - p6; V = p6 - p5; cube.normals.push_back(cross(U, V));
-    U = p2 - p6; V = p6 - p5; cube.normals.push_back(cross(U, V));
-    U = p2 - p6; V = p6 - p5; cube.normals.push_back(cross(U, V));
+//    Vector3f p1 = Vector3f(-0.5, -0.5, 0.5);
+//    Vector3f p2 = Vector3f(0.5, -0.5, 0.5);
+//    Vector3f p3 = Vector3f(0.5, 0.5, 0.5);
+//    Vector3f p4 = Vector3f(-0.5, 0.5, 0.5);
+//    Vector3f p5 = Vector3f(-0.5, -0.5, -0.5);
+//    Vector3f p6 = Vector3f(0.5, -0.5, -0.5);
+//    Vector3f p7 = Vector3f(0.5, 0.5, -0.5);
+//    Vector3f p8 = Vector3f(-0.5, 0.5, -0.5);
+//    Vector3f U, V;
+    
+//    cube.vertices.push_back(p5); cube.vertices.push_back(p6); cube.vertices.push_back(p7);
+//    cube.vertices.push_back(p7); cube.vertices.push_back(p8); cube.vertices.push_back(p5);
+//    cube.normals.push_back(Vector3f(0.0, 0.0, -1.0));
+//    cube.normals.push_back(Vector3f(0.0, 0.0, -1.0));
+//
+//
+//    cube.vertices.push_back(p1); cube.vertices.push_back(p2); cube.vertices.push_back(p3);
+//    cube.vertices.push_back(p3); cube.vertices.push_back(p4); cube.vertices.push_back(p1);
+//    cube.normals.push_back(Vector3f(0.0, 0.0, 1.0));
+//    cube.normals.push_back(Vector3f(0.0, 0.0, 1.0));
+//
+//    cube.vertices.push_back(p4); cube.vertices.push_back(p8); cube.vertices.push_back(p5);
+//    cube.vertices.push_back(p5); cube.vertices.push_back(p1); cube.vertices.push_back(p4);
+//    cube.normals.push_back(Vector3f(-1.0, 0.0, 0.0));
+//    cube.normals.push_back(Vector3f(-1.0, 0.0, 0.0));
+//
+//    cube.vertices.push_back(p3); cube.vertices.push_back(p7); cube.vertices.push_back(p6);
+//    cube.vertices.push_back(p6); cube.vertices.push_back(p2); cube.vertices.push_back(p3);
+//    cube.normals.push_back(Vector3f(1.0, 0.0, 0.0));
+//    cube.normals.push_back(Vector3f(1.0, 0.0, 0.0));
+//
+//    cube.vertices.push_back(p5); cube.vertices.push_back(p6); cube.vertices.push_back(p2);
+//    cube.vertices.push_back(p2); cube.vertices.push_back(p1); cube.vertices.push_back(p5);
+//    cube.normals.push_back(Vector3f(0.0, -1.0, 0.0));
+//    cube.normals.push_back(Vector3f(0.0, -1.0, 0.0));
+//
+//    cube.vertices.push_back(p8); cube.vertices.push_back(p7); cube.vertices.push_back(p3);
+//    cube.vertices.push_back(p3); cube.vertices.push_back(p4); cube.vertices.push_back(p8);
+//    cube.normals.push_back(Vector3f(0.0, 1.0, 0.0));
+//    cube.normals.push_back(Vector3f(0.0, 1.0, 0.0));
     
     glGenVertexArrays(1, &cube.vao);
     glBindVertexArray(cube.vao);
@@ -352,5 +531,49 @@ Model loadCube(){
 //    glEnableVertexAttribArray(1);
     
     return cube;
+    
+}
+
+
+Model makeQuad(){
+    
+    Model model;
+    
+    float size = 1.0;
+    model.vertices.push_back(Vector3f(-size, size, 0.0));
+    model.vertices.push_back(Vector3f(-size, -size, 0.0));
+    model.vertices.push_back(Vector3f(size, -size, 0.0));
+    
+    model.vertices.push_back(Vector3f(-size, size, 0.0));
+    model.vertices.push_back(Vector3f(size, -size, 0.0));
+    model.vertices.push_back(Vector3f(size, size, 0.0));
+    
+    model.texCoords.push_back(Vector2f(0.0f, 1.0f));
+    model.texCoords.push_back(Vector2f(0.0f, 0.0f));
+    model.texCoords.push_back(Vector2f(1.0f, 0.0f));
+    
+    model.texCoords.push_back(Vector2f(0.0f, 1.0f));
+    model.texCoords.push_back(Vector2f(1.0f, 0.0f));
+    model.texCoords.push_back(Vector2f(1.0f, 1.0f));
+    
+    
+    glGenVertexArrays(1, &model.vao);
+    glBindVertexArray(model.vao);
+    
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, model.vertices.size() * sizeof(Vector3f), model.vertices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+    
+    GLuint tbo;
+    glGenBuffers(1, &tbo);
+    glBindBuffer(GL_ARRAY_BUFFER, tbo);
+    glBufferData(GL_ARRAY_BUFFER, model.texCoords.size() * sizeof(Vector2f), model.texCoords.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+    
+    return model;
     
 }

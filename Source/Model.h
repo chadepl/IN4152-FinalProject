@@ -19,6 +19,11 @@ public:
     std::vector<Vector3f> normals;
     std::vector<Vector2f> texCoords;
     std::vector<Vector3f> colors;
+    std::vector<Vector3f> diffuseColors;
+    std::vector<Vector3f> ambientColors;
+    std::vector<Vector3f> specularColors;
+    std::vector<float> shininessValues;
+    
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
 
@@ -26,6 +31,8 @@ public:
 };
 
 Model loadModel(std::string path);
+Model loadModelWithMaterials(std::string path);
 Model loadMap(float width, float depth, int resolution);
 Model loadCube();
+Model makeQuad();
 Vector3f getColor(float height);
