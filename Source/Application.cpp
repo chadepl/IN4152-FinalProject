@@ -12,6 +12,7 @@
 #include <glm/glm/gtc/matrix_transform.hpp>
 #include <glm/glm/gtc/type_ptr.hpp>
 #include <GLFW/glfw3.h>
+#include <gl/GL.h>
 
 #include <vector>
 #include <iostream>
@@ -115,7 +116,7 @@ public:
         // INIT GAME STATE
         
         game.characterPosition = Vector3f(0.f, 10.f, 0.f); //3.5f, 2.f, -3.f
-        game.characterScalingFactor = .5f;
+        game.characterScalingFactor = .1f;
         game.characterTurboModeOn = false;
         
         game.hangarPosition = Vector3f(0.f, 1.f, 0.f);
@@ -314,7 +315,13 @@ public:
         // Matrix4f projMatrix = projectionOrthographicMatric(0.1, 5, -1, 1, 1, -1);
         
         // depends on processKeyboardInput();
-        Matrix4f viewMatrix = lookAtMatrix(cameraPos, cameraPos + cameraTarget, cameraUp);
+		//cameraPos = game.characterPosition-cameraTarget;
+		// Matrix4f test = lookAtMatrix(cameraPos, cameraTarget, cameraUp);
+		// cameraPos = game.characterPosition - Vector3f(-test[2], -test[8], -test[12]);
+		cameraPos = game.characterPosition + -cameraTarget * 2.f;
+		std::cout << cameraPos << std::endl;
+		std::cout << "Model: "<< game.characterPosition << std::endl;
+        Matrix4f viewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp);
         
         
         defaultShader.uniformMatrix4f("projMatrix", projMatrix);
@@ -352,7 +359,13 @@ public:
         defaultShader.uniform3f("viewPos", cameraPos);
         defaultShader.uniform1i("forTesting", 0);
         
-        drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(0, 0, 0), game.characterScalingFactor);
+		//game.characterPosition = cameraPos + Vector3f(0, -0.5f, .5f);
+		//std::cout << cameraTarget << std::endl;
+		//std::cout << "Angle: " << rotateAngle << std::endl;
+		auto horizontalAngle = atan2(cameraTarget.x, cameraTarget.z) * (180/M_PI);
+		
+		//std::cout << "HORIZONTAL: " << horizontalAngle * (180/M_PI) << std::endl;
+		drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(0,0, 0), game.characterScalingFactor);
         
         defaultShader.uniform1i("forTesting", 1);
         
@@ -383,21 +396,23 @@ public:
 		if (mKeyPressed[GLFW_KEY_W]) {
 			// Move forward using unit direction vector
 			cameraPos += cameraTarget.normalize() * movementSpeed;
-			
+			game.characterPosition += cameraTarget.normalize() * movementSpeed;
 			//std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
 		}
 		if (mKeyPressed[GLFW_KEY_S]) {
 			// Move backward using unit direction vector
-			cameraPos -= cameraTarget.normalize() * movementSpeed;
-
+			game.characterPosition -= cameraTarget.normalize() * movementSpeed;
+			// cameraPos -= cameraTarget.normalize() * movementSpeed;
 			//std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;		
 		}
 		if (mKeyPressed[GLFW_KEY_A]) {
-			cameraPos -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+			// cameraPos -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+			game.characterPosition -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
 		}
 		if (mKeyPressed[GLFW_KEY_D]) {
-			cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
-			
+			game.characterPosition += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+			// cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+
 		}
 		//std::cout << "Camera pos x: " << cameraPos.x << cameraPos.y << cameraPos.z << std::endl;
 
