@@ -287,8 +287,12 @@ public:
         //ShaderProgram& shader = defaultShader;
         if(!forComputingShadows){
             defaultShader.bind();
-            
-            glViewport(0, 0, WIDTH * 2, HEIGHT *2);
+			#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+			glViewport(0, 0, WIDTH, HEIGHT);
+			#else
+			glViewport(0, 0, WIDTH * 2, HEIGHT * 2);
+			#endif
+           
             
             // Clear the screen
             glClearColor(0.94f, 1.f, 1.f, 1.f);
