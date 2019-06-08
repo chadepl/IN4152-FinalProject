@@ -5,6 +5,7 @@ uniform sampler2D shadowMap;
 
 uniform int forTesting;
 uniform bool hasTexCoords;
+uniform bool turboModeOn;
 
 uniform vec3 viewPos;
 
@@ -34,7 +35,9 @@ in vec3 passColor;
 out vec4 fragColor;
 
 
-void getShadowMultiplier(in vec4 fragLightCoord, in bool spotlight, inout float percentageShadow){
+float getShadowMultiplier(in vec4 fragLightCoord, in bool spotlight){
+    
+    float percentageShadow = 0.f;
     
     fragLightCoord.xyz /= fragLightCoord.w; // In NDC (-1, 1)
     fragLightCoord.xyz = fragLightCoord.xyz * 0.5 + 0.5; // In texture coordinates
@@ -67,9 +70,11 @@ void getShadowMultiplier(in vec4 fragLightCoord, in bool spotlight, inout float 
     
     percentageShadow /= 9.f;
     
+    return percentageShadow;
 }
 
-vec3 getColorBlinnPhong(Light light, vec3 lightDir, vec3 normal){
+// Implementation of ColorBlinnPhong and Toon shading
+vec3 getShading(Light light, vec3 lightDir, vec3 normal){
     
     float distToLight = length(lightDir);
     distToLight = distToLight * distToLight;
@@ -90,40 +95,42 @@ vec3 getColorBlinnPhong(Light light, vec3 lightDir, vec3 normal){
         
     }
     
-//    blinnPhongColor = material.ambientColor +
-//    material.diffuseColor * diffuse * light.diffuseColor * light.lightPower / distToLight +
-//    material.specularColor * specular * light.specularColor * light.lightPower / distToLight;
+    // Toon shading
+    if(turboModeOn){
+        if (diffuse > 0 && diffuse < 0.25){
+            diffuse = 0.25;
+        } else if (diffuse >= 0.25 && diffuse < 0.5) {
+            diffuse = 0.5;
+        } else if (diffuse >= 0.5 && diffuse < 0.75) {
+            diffuse = 0.75;
+        } else if (diffuse >= 0.75) {
+            diffuse = 1;
+        }
+    }
     
     vec3 result = material.ambientColor * ambient + material.diffuseColor * diffuse + material.specularColor * specular;
-    
     
     return result;
 }
 
+
 void main()
 {
     // For shadows
-    //vec4 fragLightCoord = lightProjMatrix * lightViewMatrix * vec4(passPosition, 1.0);
-    //float percentageShadow = 0.f;
-    //getShadowMultiplier(fragLightCoord, false, percentageShadow);
+    vec4 fragLightCoord = light.projectionMatrix * light.viewMatrix * vec4(passPosition, 1.0);
+    float percentageShadow = getShadowMultiplier(fragLightCoord, false);
     
     vec3 normal = normalize(passNormal);
 
     //if (hasTexCoords)
     //    material.ambientColor = texture(colorMap, passTexCoord).rgb;
     //    material.diffuseColor = texture(colorMap, passTexCoord).rgb;
-    //if (hasColor)
-    //    material.ambientColor = passColor;
-    //    material.diffuseColor = texture(colorMap, passTexCoord).rgb;
-    
+
     // Compute shading
     vec3 lightDir = light.position - passPosition;
-    vec3 blinnPhongColor = getColorBlinnPhong(light, lightDir, normal);
+    vec3 finalColor = getShading(light, lightDir, normal);
+
     
-    fragColor = vec4(blinnPhongColor, 1.0);
+    fragColor = vec4(finalColor * (1-percentageShadow), 1.0);
     
-    
-    // Output color value, change from (1, 0, 0) to something else
-    //fragColor = vec4(colorLinear
-     //                .xyz * percentageShadow, 1.0);
 }
