@@ -72,8 +72,9 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     Matrix4f modelMatrix;
     modelMatrix.translate(position);
 	if (spacecraft) {
-		modelMatrix.rotate(rotation.x, 1.f, 0, 0);
 		modelMatrix.rotate(rotation.y, 0, 1.f, 0);
+		modelMatrix.rotate(rotation.x, 1.f, 0, 0);
+
 	}
 	else {
 		modelMatrix.rotate(rotation);
@@ -346,6 +347,7 @@ public:
             
             // 3. Draw spacecraft
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+			
             drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, 0), game.characterScalingFactor, true);
             
             // 4. Draw moving planets
