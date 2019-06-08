@@ -12,7 +12,6 @@
 #include <glm/glm/gtc/matrix_transform.hpp>
 #include <glm/glm/gtc/type_ptr.hpp>
 #include <GLFW/glfw3.h>
-#include <gl/GL.h>
 
 #include <vector>
 #include <iostream>
@@ -150,6 +149,9 @@ public:
 
 		//spacecraft = loadModel("Resources/spacecraft.obj");
         spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
+        
+        // Obstacles ... this is an example, they should be added procedurally
+        arcTest = loadModelWithMaterials("Resources/obstacleArc.obj");
         
         earth = loadModel("Resources/gijsEarth.obj");
         earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
@@ -363,6 +365,9 @@ public:
             // 6. Draw OTHER stuff
                 //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
             
+            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+            drawModel(defaultShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
+            
             defaultShader.uniform1i("forTesting", 1); // REMOVE at the end
             //drawModel(defaultShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
             
@@ -389,6 +394,8 @@ public:
             // 5. Draw arcs
             
             // 6. Draw OTHER stuff
+            
+            drawModel(shadowShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
             
             //drawModel(shadowShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
             
@@ -590,6 +597,7 @@ private:
     Model testingQuad;
     Image testingQuad_tex;
     Model lightCube;
+    Model arcTest;
     
     // Shadow mapping
     const int SHADOWTEX_WIDTH  = 1024;
