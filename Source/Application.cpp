@@ -100,6 +100,37 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     
 }
 
+// Rudimentary function for drawing models, feel free to replace or change it with your own logic
+// Just make sure you let the shader know whether the model has texture coordinates
+void drawPlanet(ShaderProgram& shader, const Model& model, Vector3f& position, Vector3f rotation = Vector3f(0), float scale = 1, Vector3f rotationPoint = Vector3f(0), float distance=1.f)
+{
+	Matrix4f modelMatrix;
+	
+	float newX = distance * cos(degToRad(rotation.y)) + rotationPoint.x;
+	float newZ = distance * sin(degToRad(rotation.y)) + rotationPoint.z;
+	position = Vector3f(newX, position.y, newZ);
+	
+	modelMatrix.translate(position);
+	modelMatrix.rotate(rotation.y, 0, 1.f, 0);
+
+	modelMatrix.scale(scale);
+
+	shader.uniformMatrix4f("modelMatrix", modelMatrix);
+	shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
+
+	if (model.texCoords.size() > 0) {
+		int nMaterial = model.materials.size();
+
+		// Bind texture of the model
+		glBindTexture(GL_TEXTURE_2D, textureHandles[model.materials[0].diffuse_texname]);
+	}
+
+
+	glBindVertexArray(model.vao);
+	glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
+
+}
+
 
 
 class Application : KeyListener, MouseMoveListener, MouseClickListener
@@ -151,15 +182,22 @@ public:
         spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
         
         // Obstacles ... this is an example, they should be added procedurally
-        arcTest = loadModelWithMaterials("Resources/obstacleArc.obj");
+        //arcTest = loadModelWithMaterials("Resources/obstacleArc.obj");
         
         earth = loadModel("Resources/gijsEarth.obj");
         earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
-        std::cout << earth_texture.handle << std::endl;
+		pEarth.position = Vector3f(0.f, 2.f, 0.f);
+		pEarth.rotationAngle = 0.f;
+		pMars.position = Vector3f(10.f, 2.f, 2.f);
+		pMars.rotationAngle = 0.f;
+		pTest.position = Vector3f(10.f, 2.f, 12.f);
+		pTest.rotationAngle = 0.f;
+
+
+
         
         hangar = loadModel("Resources/Hangar2.obj");
         hangar_roof = loadImage("Resources/" + hangar.materials[0].diffuse_texname);
-        std::cout << hangar_roof.handle << std::endl;
 
 		textureHandles.insert(std::pair<std::string, int>(earth.materials[0].diffuse_texname, earth_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(hangar.materials[0].diffuse_texname, hangar_roof.handle));
@@ -357,8 +395,12 @@ public:
             drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, 0), game.characterScalingFactor, true);
             
             // 4. Draw moving planets
-            
-            
+			pEarth.rotationAngle += 0.1f;
+			drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 0.5f);
+			drawPlanet(defaultShader, earth, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 0.75f, pEarth.position, 5.f);
+			std::cout << pMars.position << std::endl;
+			drawPlanet(defaultShader, earth, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 0.5f, pMars.position, 1.f);
+
             // 5. Draw arcs
             
             
@@ -366,7 +408,7 @@ public:
                 //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
             
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
-            drawModel(defaultShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
+            //drawModel(defaultShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
             
             defaultShader.uniform1i("forTesting", 1); // REMOVE at the end
             //drawModel(defaultShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
@@ -546,6 +588,11 @@ private:
         Vector3f center;
         Model model;
     } map;
+
+	struct Planet {
+		Vector3f position;
+		float rotationAngle;
+	};
     
     // Light
     struct Light {
@@ -584,6 +631,10 @@ private:
 	Model earth;
 	Model hangar;
 	Model spacecraft;
+
+	Planet pEarth;
+	Planet pMars;
+	Planet pTest;
 
 	Image earth_texture;
 	Image hangar_roof;
