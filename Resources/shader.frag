@@ -1,6 +1,6 @@
 #version 330
 
-//uniform sampler2D colorMap;
+uniform sampler2D colorMap;
 uniform sampler2D shadowMap;
 
 uniform int forTesting;
@@ -74,7 +74,7 @@ float getShadowMultiplier(in vec4 fragLightCoord, in bool spotlight){
 }
 
 // Implementation of ColorBlinnPhong and Toon shading
-vec3 getShading(Light light, vec3 lightDir, vec3 normal){
+vec3 getShading(Light light, vec3 lightDir, vec3 normal, vec3 diffuseToUse){
     
     float distToLight = length(lightDir);
     distToLight = distToLight * distToLight;
@@ -108,7 +108,7 @@ vec3 getShading(Light light, vec3 lightDir, vec3 normal){
         }
     }
     
-    vec3 result = material.ambientColor * ambient + material.diffuseColor * diffuse + material.specularColor * specular;
+    vec3 result = material.ambientColor * ambient + diffuseToUse * diffuse + material.specularColor * specular;
     
     return result;
 }
@@ -122,15 +122,17 @@ void main()
     
     vec3 normal = normalize(passNormal);
 
-    //if (hasTexCoords)
-    //    material.ambientColor = texture(colorMap, passTexCoord).rgb;
-    //    material.diffuseColor = texture(colorMap, passTexCoord).rgb;
-
-    // Compute shading
     vec3 lightDir = light.position - passPosition;
-    vec3 finalColor = getShading(light, lightDir, normal);
-
+    vec3 texDiffuse, finalColor;
     
+    if (hasTexCoords){
+        texDiffuse = texture(colorMap, passTexCoord).rgb;
+        finalColor = texDiffuse;//getShading(light, lightDir, normal, texDiffuse);
+        percentageShadow = 0;
+    }else{
+        finalColor = getShading(light, lightDir, normal, material.diffuseColor);
+    }
+
     fragColor = vec4(finalColor * (1-percentageShadow), 1.0);
     
 }

@@ -92,6 +92,7 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 
 		// Bind texture of the model
 		glBindTexture(GL_TEXTURE_2D, textureHandles[model.materials[0].diffuse_texname]);
+        shader.uniform1f("colorMap", textureHandles[model.materials[0].diffuse_texname]);
 	}
 
 	
@@ -136,16 +137,15 @@ public:
         
         // -- light
         
-        light.position = Vector3f(3.f, 20.f, 8.f);
-        light.viewMatrix = lookAtMatrix(light.position, game.characterPosition, Vector3f(0.f, 1.f, 0.f));
-        light.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
+        updateLight(Vector3f(game.characterPosition.x, 20.f, game.characterPosition.z),
+                    game.characterPosition, 60, 0.1, 100);
         
         // LOADING MODELS
         
         // map
         map.resolution = 100;
         map.center = Vector3f(game.characterPosition.x, 0.f, game.characterPosition.z);
-        map.model = makeMap(map.center, 100, 5.f, 50.f);
+        map.model = makeMap(100, 2.f,  game.characterPosition, 5.f, 200.f); 
 
 		//spacecraft = loadModel("Resources/spacecraft.obj");
         spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
@@ -157,9 +157,8 @@ public:
         earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
         std::cout << earth_texture.handle << std::endl;
         
-        hangar = loadModel("Resources/Hangar2.obj");
+        hangar = loadModelWithMaterials("Resources/Hangar2.obj");
         hangar_roof = loadImage("Resources/" + hangar.materials[0].diffuse_texname);
-        std::cout << hangar_roof.handle << std::endl;
 
 		textureHandles.insert(std::pair<std::string, int>(earth.materials[0].diffuse_texname, earth_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(hangar.materials[0].diffuse_texname, hangar_roof.handle));
@@ -198,11 +197,7 @@ public:
             std::cerr << e.what() << std::endl;
         }
 
-        // Correspond the OpenGL texture units 0 and 1 with the
-        // colorMap and shadowMap uniforms in the shader
         defaultShader.bind();
-        //defaultShader.uniform1i("colorMap", 0);
-        //defaultShader.uniform1i("shadowMap", 1);
 
         // Upload the projection matrix once, if it doesn't change
         // during the game we don't need to reupload it
@@ -237,6 +232,12 @@ public:
         glClear(GL_DEPTH_BUFFER_BIT);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
+    }
+    
+    void updateLight(Vector3f newPos,Vector3f newTarget,float fov, float near, float far){
+        light.position = newPos;
+        light.viewMatrix = lookAtMatrix(light.position, newTarget, Vector3f(0,1,0));
+        light.projectionMatrix = projectionProjectiveMatrix(fov, 1, near, far);
     }
 
     void update()
@@ -344,12 +345,13 @@ public:
         
         if(!forComputingShadows){
             // 1. Draw map
-            defaultShader.uniform1i("forTesting", 1); // REMOVE at the end
+            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
             drawModel(defaultShader, map.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
             
             // 2. Draw hangar
-            // drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
+            defaultShader.uniform1i("forTesting", 0);
+            drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
             
             // 3. Draw spacecraft
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
@@ -384,7 +386,7 @@ public:
             drawModel(shadowShader, map.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
             // 2. Draw hangar
-            // drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
+            drawModel(shadowShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);            
             
             // 3. Draw spacecraft
             drawModel(shadowShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, 0), game.characterScalingFactor, true);
@@ -416,8 +418,10 @@ public:
         light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
         light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
         
+        //light.position = (game.characterPosition.x, 100, game.characterPosition.z);
+        
         if(false){ // distance between player and center of the map            
-            map.model = makeMap(map.center, 100, 1.f, 1.f);
+            //map.model = makeMap(map.center, 100, 1.f, 1.f);
         }
         
         

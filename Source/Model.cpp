@@ -276,14 +276,14 @@ float getNoiseValue(noise::module::Perlin perlinGenerator, float posX, float pos
 // Makes map
 // Resolution refers to the number of squares (x2 number of triangles) per side
 // Maps is always generated as a square of size 1
-Model makeMap(Vector3f center, int resolution, float heightMult, float size)
+Model makeMap(int resolution, float perlinSize, Vector3f translation, float heightMult, float scale)
 {
     
     Model model;
     srand(time(0));
     
-    float stepX = (float) size/resolution;
-    float stepZ = (float) size/resolution;
+    float offset = (float) perlinSize/resolution;
+    Vector3f normalizedTranslation = translation/scale;
 
     // Initialize noise
     noise::module::Perlin myModule;
@@ -291,23 +291,31 @@ Model makeMap(Vector3f center, int resolution, float heightMult, float size)
     for (int i = 0; i < resolution; i++) {
         for (int j = 0; j < resolution; j++) {
             
-            float pos1x = (center.x - size/2) + i * stepX;
-            float pos2x = (center.x - size/2) + ((i + 1) * stepX);
+            float pos1x = normalizedTranslation.x + i * offset;
+            float pos2x = normalizedTranslation.x + ((i + 1) * offset);
             
-            float pos1z = (center.z - size/2) + j * stepZ;
-            float pos2z = (center.z - size/2) + ((j + 1) * stepZ);
+            float pos1z = normalizedTranslation.z + j * offset;
+            float pos2z = normalizedTranslation.z + ((j + 1) * offset);
             
-            float height11 = heightMult * getNoiseValue(myModule, pos1x, pos1z);
-            Vector3f point11 = Vector3f(pos1x, height11, pos1z);
+            float perlin11 = getNoiseValue(myModule, pos1x, pos1z);
+            float height11 = heightMult * perlin11;
+            Vector3f color11 = getColor(perlin11);
+            Vector3f point11 = Vector3f(pos1x * scale - (scale/2), height11, pos1z * scale - (scale/2));
             
-            float height12 = heightMult * getNoiseValue(myModule, pos1x, pos2z);
-            Vector3f point12 = Vector3f(pos1x, height12, pos2z);
+            float perlin12 = getNoiseValue(myModule, pos1x, pos2z);
+            float height12 = heightMult * perlin12;
+            Vector3f color12 = getColor(perlin12);
+            Vector3f point12 = Vector3f(pos1x * scale - (scale/2), height12, pos2z * scale - (scale/2));
             
-            float height21 = heightMult * getNoiseValue(myModule, pos2x, pos1z);
-            Vector3f point21 = Vector3f(pos2x, height21, pos1z);
+            float perlin21 = getNoiseValue(myModule, pos2x, pos1z);
+            float height21 = heightMult * perlin21;
+            Vector3f color21 = getColor(perlin21);
+            Vector3f point21 = Vector3f(pos2x * scale - (scale/2), height21, pos1z * scale - (scale/2));
             
-            float height22 = heightMult * getNoiseValue(myModule, pos2x, pos2z);
-            Vector3f point22 = Vector3f(pos2x, height22, pos2z);
+            float perlin22 = getNoiseValue(myModule, pos2x, pos2z);
+            float height22 = heightMult * perlin22;
+            Vector3f color22 = getColor(perlin22);
+            Vector3f point22 = Vector3f(pos2x * scale - (scale/2), height22, pos2z * scale - (scale/2));
             
             Vector3f P, Q;
             Vector3f normalVec;
@@ -326,17 +334,17 @@ Model makeMap(Vector3f center, int resolution, float heightMult, float size)
             model.normals.push_back(normalVec);
             model.normals.push_back(normalVec);
             
-            model.diffuseColors.push_back(getColor(height11/heightMult));
-            model.diffuseColors.push_back(getColor(height21/heightMult));
-            model.diffuseColors.push_back(getColor(height22/heightMult));
+            model.diffuseColors.push_back(color11);
+            model.diffuseColors.push_back(color21);
+            model.diffuseColors.push_back(color22);
             
-            model.ambientColors.push_back(getColor(height11/heightMult));
-            model.ambientColors.push_back(getColor(height21/heightMult));
-            model.ambientColors.push_back(getColor(height22/heightMult));
+            model.ambientColors.push_back(Vector3f(1.f, 1.f, 1.f));
+            model.ambientColors.push_back(Vector3f(1.f, 1.f, 1.f));
+            model.ambientColors.push_back(Vector3f(1.f, 1.f, 1.f));
             
-            model.specularColors.push_back(getColor(height11/heightMult));
-            model.specularColors.push_back(getColor(height21/heightMult));
-            model.specularColors.push_back(getColor(height22/heightMult));
+            model.specularColors.push_back(Vector3f(0.5f, 0.5f, 0.5f));
+            model.specularColors.push_back(Vector3f(0.5f, 0.5f, 0.5f));
+            model.specularColors.push_back(Vector3f(0.5f, 0.5f, 0.5f));
             
             model.shininessValues.push_back(20.f);
             model.shininessValues.push_back(20.f);
@@ -356,17 +364,17 @@ Model makeMap(Vector3f center, int resolution, float heightMult, float size)
             model.normals.push_back(normalVec);
             model.normals.push_back(normalVec);
             
-            model.diffuseColors.push_back(getColor(height11/heightMult));
-            model.diffuseColors.push_back(getColor(height22/heightMult));
-            model.diffuseColors.push_back(getColor(height12/heightMult));
+            model.diffuseColors.push_back(color11);
+            model.diffuseColors.push_back(color22);
+            model.diffuseColors.push_back(color12);
             
-            model.ambientColors.push_back(getColor(height11/heightMult));
-            model.ambientColors.push_back(getColor(height22/heightMult));
-            model.ambientColors.push_back(getColor(height12/heightMult));
+            model.ambientColors.push_back(Vector3f(1.f, 1.f, 1.f));
+            model.ambientColors.push_back(Vector3f(1.f, 1.f, 1.f));
+            model.ambientColors.push_back(Vector3f(1.f, 1.f, 1.f));
             
-            model.specularColors.push_back(getColor(height11/heightMult));
-            model.specularColors.push_back(getColor(height22/heightMult));
-            model.specularColors.push_back(getColor(height12/heightMult));
+            model.specularColors.push_back(Vector3f(0.5f, 0.5f, 0.5f));
+            model.specularColors.push_back(Vector3f(0.5f, 0.5f, 0.5f));
+            model.specularColors.push_back(Vector3f(0.5f, 0.5f, 0.5f));
             
             model.shininessValues.push_back(20.f);
             model.shininessValues.push_back(20.f);
@@ -436,7 +444,7 @@ Vector3f FOREST = Vector3f(0.f, 0.2f, 0.f) * 0.5;
 Vector3f JUNGLE = Vector3f(0.2f, 0.8f, 0.2f) * 0.5;
 Vector3f SAVANNAH = Vector3f(1.f, 0.8f, 0.f) * 0.5;
 Vector3f DESERT = Vector3f(1.f, 0.4f, 0.f) * 0.5;
-Vector3f SNOW = Vector3f(255.f, 255.f, 0.8f) * 0.5;
+Vector3f SNOW = Vector3f(1.f, 1.f, 1.f) * 0.5;
 
 Vector3f getColor(float e){
     if (e < 0.1) return WATER;
