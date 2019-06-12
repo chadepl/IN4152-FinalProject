@@ -92,7 +92,8 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 
 		// Bind texture of the model
 		glBindTexture(GL_TEXTURE_2D, textureHandles[model.materials[0].diffuse_texname]);
-        shader.uniform1f("colorMap", textureHandles[model.materials[0].diffuse_texname]);
+		glActiveTexture(GL_TEXTURE0);
+        //shader.uniform1f("colorMap", textureHandles[model.materials[0].diffuse_texname]);
 	}
 
 	
@@ -202,13 +203,20 @@ public:
             obstacles.push_back(newObstacle);
         }
         
+
         earth = loadModelWithMaterials("Resources/gijsEarth.obj");
         earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
-		pEarth.position = Vector3f(0.f, 2.f, 0.f);
+		mars = loadModelWithMaterials("Resources/mars.obj");
+		mars_texture = loadImage("Resources/" + mars.materials[0].diffuse_texname);
+		pinkplanet = loadModelWithMaterials("Resources/pink.obj");
+		pink_texture = loadImage("Resources/" + pinkplanet.materials[0].diffuse_texname);
+
+
+		pEarth.position = Vector3f(0.f, 30.f, 0.f);
 		pEarth.rotationAngle = 0.f;
-		pMars.position = Vector3f(10.f, 2.f, 2.f);
+		pMars.position = Vector3f(20.f, 30.f, 2.f);
 		pMars.rotationAngle = 0.f;
-		pTest.position = Vector3f(10.f, 2.f, 12.f);
+		pTest.position = Vector3f(10.f, 30.f, 12.f);
 		pTest.rotationAngle = 0.f;
 
         hangar = loadModelWithMaterials("Resources/Hangar2.obj");
@@ -216,7 +224,9 @@ public:
 
 		textureHandles.insert(std::pair<std::string, int>(earth.materials[0].diffuse_texname, earth_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(hangar.materials[0].diffuse_texname, hangar_roof.handle));
-        
+		textureHandles.insert(std::pair<std::string, int>(mars.materials[0].diffuse_texname, mars_texture.handle));
+		textureHandles.insert(std::pair<std::string, int>(pinkplanet.materials[0].diffuse_texname, pink_texture.handle));
+
         // testing models
         testingQuad = makeQuad();
         testingQuad_tex = loadImage("Resources/earth-square.jpg");
@@ -408,11 +418,14 @@ public:
             drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, 0), game.characterScalingFactor, true);
             
             // 4. Draw moving planets
-			//pEarth.rotationAngle += 0.1f;
-			//drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 0.5f);
-			//drawPlanet(defaultShader, earth, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 0.75f, pEarth.position, 5.f);
-			
-		//	drawPlanet(defaultShader, earth, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 0.5f, pMars.position, 1.f);
+
+			pEarth.rotationAngle += 0.1f;
+			pMars.rotationAngle += 0.05f;
+			pTest.rotationAngle += 0.01f;
+			drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 4.f);
+			drawPlanet(defaultShader, mars, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position, 25.f);
+			drawPlanet(defaultShader, pinkplanet, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 1.5f, pMars.position, 12.f);
+
 
             // 5. Draw arcs
             for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
@@ -676,6 +689,8 @@ private:
     Model dragon;
     Model davidHead;
 	Model earth;
+	Model mars;
+	Model pinkplanet;
 	Model hangar;
 	Model spacecraft;
 
@@ -684,6 +699,8 @@ private:
 	Planet pTest;
 
 	Image earth_texture;
+	Image mars_texture;
+	Image pink_texture;
 	Image hangar_roof;
     
     GLint m_viewport[4];
