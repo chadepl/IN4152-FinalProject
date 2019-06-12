@@ -331,7 +331,9 @@ public:
     // Method for drawing all the elements of the game
     void drawScene(bool forComputingShadows) {
         
-		cameraPos = game.characterPosition + -cameraTarget * 2.f;
+		cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f,0))  *2.f;
+		
+		
         Matrix4f viewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
         Matrix4f projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
         
@@ -450,7 +452,7 @@ public:
             
             // 6. Draw OTHER stuff
             
-            drawModel(shadowShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
+            //drawModel(shadowShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
             
             //drawModel(shadowShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
             
@@ -632,7 +634,7 @@ private:
 
 	// Key and mouse input variables and parameters
 	std::map<int, bool> mKeyPressed;
-	float movementSpeed = 0.05f;
+	float movementSpeed = 0.15f;
 	float mouseSensitivity = 0.1f;
 	bool mouseCaptured = false;
 	float last_x, last_y;
