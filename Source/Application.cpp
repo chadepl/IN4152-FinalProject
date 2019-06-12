@@ -210,7 +210,9 @@ public:
 		mars_texture = loadImage("Resources/" + mars.materials[0].diffuse_texname);
 		pinkplanet = loadModelWithMaterials("Resources/pink.obj");
 		pink_texture = loadImage("Resources/" + pinkplanet.materials[0].diffuse_texname);
-
+		
+		skybox = loadModelWithMaterials("Resources/skybox.obj");
+		skybox_texture = loadImage("Resources/" + earth.materials[0].diffuse_texname);
 
 		pEarth.position = Vector3f(0.f, 30.f, 0.f);
 		pEarth.rotationAngle = 0.f;
@@ -226,6 +228,7 @@ public:
 		textureHandles.insert(std::pair<std::string, int>(hangar.materials[0].diffuse_texname, hangar_roof.handle));
 		textureHandles.insert(std::pair<std::string, int>(mars.materials[0].diffuse_texname, mars_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(pinkplanet.materials[0].diffuse_texname, pink_texture.handle));
+		textureHandles.insert(std::pair<std::string, int>(pinkplanet.materials[0].diffuse_texname, skybox_texture.handle));
 
         // testing models
         testingQuad = makeQuad();
@@ -438,7 +441,8 @@ public:
             
             // 6. Draw OTHER stuff
                 //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
-            
+			drawModel(defaultShader, skybox, map.center, Vector3f(0.f), 100.f);
+
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
             //drawModel(defaultShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
             
@@ -695,6 +699,7 @@ private:
 	Model pinkplanet;
 	Model hangar;
 	Model spacecraft;
+	Model skybox;
 
 	Planet pEarth;
 	Planet pMars;
@@ -704,6 +709,7 @@ private:
 	Image mars_texture;
 	Image pink_texture;
 	Image hangar_roof;
+	Image skybox_texture;
     
     GLint m_viewport[4];
     
