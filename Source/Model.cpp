@@ -279,6 +279,8 @@ Model makeMap(int resolution, float perlinSize, Vector3f translation, float heig
     Model model;
     srand(time(0));
     
+    std::cout << "REsolution: " << resolution << std::endl;
+    
     float offset = (float) perlinSize/resolution;
     Vector3f normalizedTranslation = translation/scale;
 

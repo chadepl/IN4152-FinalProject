@@ -183,8 +183,6 @@ public:
         
         // LOADING MODELS
         
-        // map
-        map.resolution = 100;
         map.center = Vector3f(game.characterPosition.x, 0.f, game.characterPosition.z);
         map.model = makeMap(map.resolution, map.perlinSize, game.characterPosition, map.heightMult, map.scale);
 
@@ -214,8 +212,8 @@ public:
 		pinkplanet = loadModelWithMaterials("Resources/pink.obj");
 		pink_texture = loadImage("Resources/" + pinkplanet.materials[0].diffuse_texname);
 		
-		skybox = loadModelWithMaterials("Resources/skybox.obj");
-		skybox_texture = loadImage("Resources/" + earth.materials[0].diffuse_texname);
+		skybox = loadModelWithMaterials("Resources/skysphereblue.obj");
+		skybox_texture = loadImage("Resources/" + skybox.materials[0].diffuse_texname);
 
 		pEarth.position = Vector3f(0.f, 30.f, 0.f);
 		pEarth.rotationAngle = 0.f;
@@ -231,7 +229,7 @@ public:
 		textureHandles.insert(std::pair<std::string, int>(hangar.materials[0].diffuse_texname, hangar_roof.handle));
 		textureHandles.insert(std::pair<std::string, int>(mars.materials[0].diffuse_texname, mars_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(pinkplanet.materials[0].diffuse_texname, pink_texture.handle));
-		textureHandles.insert(std::pair<std::string, int>(pinkplanet.materials[0].diffuse_texname, skybox_texture.handle));
+		textureHandles.insert(std::pair<std::string, int>(skybox.materials[0].diffuse_texname, skybox_texture.handle));
 
         // testing models
         testingQuad = makeQuad();
@@ -257,6 +255,12 @@ public:
 
             // Any new shaders can be added below in similar fashion
             // ....
+            
+            skySphereShader.create();
+            skySphereShader.addShader(VERTEX, "Resources/shaderSkySphere.vert");
+            skySphereShader.addShader(FRAGMENT, "Resources/shaderSkySphere.frag");
+            skySphereShader.build();
+            
             testShader.create();
             testShader.addShader(VERTEX, "Resources/test.vert");
             testShader.addShader(FRAGMENT, "Resources/test.frag");
@@ -315,6 +319,16 @@ public:
             processKeyboardInput();
             
             updateGameState();
+            
+//            glClearColor(0.94f, 1.f, 1.f, 1.f);
+//            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//
+//            skySphereShader.bind();
+//            skySphereShader.uniformMatrix4f("projMatrix", projMatrix);
+//            skySphereShader.uniformMatrix4f("viewMatrix", viewMatrix);
+            
+            
+            //drawModel(skySphereShader, skybox, Vector3f(0.f, 0.f, 0.f), Vector3f(0.f), 10.f, false);
             
             drawScene(true);
             
@@ -444,7 +458,9 @@ public:
             
             // 6. Draw OTHER stuff
                 //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
-			drawModel(defaultShader, skybox, map.center, Vector3f(0.f), 100.f);
+            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+            drawModel(defaultShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale);
+
 
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
             //drawModel(defaultShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
@@ -506,11 +522,15 @@ public:
         light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
         light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
         
+        // TODO: fix, buggy
         if (game.turboModeOn){
             movementSpeed = 0.5f;
         } else {
             movementSpeed = 0.05f;
         }
+        
+        // Check, for all the arcs if the spaceship has traversed them and change something if thats the case.
+        
         
         
         if(false){ // distance between player and center of the map            
@@ -674,6 +694,7 @@ private:
         float scaling;
         Vector3f rotation;
         Model model;
+        bool notCrossed = true;
     };
     
     std::vector<Obstacle> obstacles;
@@ -694,6 +715,7 @@ private:
     ShaderProgram defaultShader;
     ShaderProgram testShader;
     ShaderProgram shadowShader;
+    ShaderProgram skySphereShader;
 
     // Projection and view matrices for you to fill in and use
     Matrix4f projMatrix;
