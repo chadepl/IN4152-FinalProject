@@ -316,9 +316,15 @@ public:
             
             updateGameState();
             
-            drawScene(true);
+            skySphereShader.bind()
+            skySphereShader.uniformMatrix4f("projMatrix", projMatrix);
+            skySphereShader.uniformMatrix4f("viewMatrix", viewMatrix);
             
-            drawScene(false);
+            drawModel(skySphereShader, spacecraft, Vector3f(0.f, 0.f, 0.f), Vector3f(0.f, 0.f, 0.f), map.scale, true);
+            
+            //drawScene(true);
+            
+            //drawScene(false);
             
             // TESTING
             
