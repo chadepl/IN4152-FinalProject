@@ -251,6 +251,12 @@ public:
 
             // Any new shaders can be added below in similar fashion
             // ....
+            
+            skySphereShader.create();
+            skySphereShader.addShader(VERTEX, "Resources/shaderSkySphere.vert");
+            skySphereShader.addShader(FRAGMENT, "Resources/shaderSkySphere.frag");
+            skySphereShader.build();
+            
             testShader.create();
             testShader.addShader(VERTEX, "Resources/test.vert");
             testShader.addShader(FRAGMENT, "Resources/test.frag");
@@ -668,6 +674,7 @@ private:
     ShaderProgram defaultShader;
     ShaderProgram testShader;
     ShaderProgram shadowShader;
+    ShaderProgram skySphereShader;
 
     // Projection and view matrices for you to fill in and use
     Matrix4f projMatrix;
