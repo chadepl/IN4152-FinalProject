@@ -33,7 +33,7 @@ public:
 
 Model loadModel(std::string path);
 Model loadModelWithMaterials(std::string path);
-Model makeMap(noise::module::Perlin perlinGenerator, float perlinSize, int resolution, float heightMult, float scale);
+Model makeTerrain(noise::module::Perlin perlinGenerator, float perlinSize, int resolution, float heightMult, float scale, bool isWater);
 float getHeightMapPoint(Vector3f point, noise::module::Perlin perlinGenerator, float scale, float heightMult);
 Model loadCube();
 Model makeQuad();

@@ -191,7 +191,14 @@ public:
         // -- loading models
         
         map.center = Vector3f(0.f);
-        map.model = makeMap(map.perlinGenerator, map.perlinSize, map.resolution, map.heightMult, map.scale);
+        map.model = makeTerrain(map.perlinGenerator, map.perlinSize, map.resolution, map.heightMult, map.scale, false);
+        
+        ocean.center = Vector3f(0.f);
+        //ocean.resolution = 100;
+        ocean.perlinSize = 3;
+        ocean.heightMult = 1.f;
+        ocean.model = makeTerrain(ocean.perlinGenerator, ocean.perlinSize, ocean.resolution, ocean.heightMult, ocean.scale, true);
+        
 		
         spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
         
@@ -346,18 +353,12 @@ public:
             
             // TESTING
             
-        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 //            testShader.bind();
 //            glViewport(0, 0, WIDTH * 2, HEIGHT *2);
 //            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 //            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 //
-//            // Bind the shadow map to texture slot 0
-//            testShader.uniform1i("texShadow", 5);
-//            //glActiveTexture(GL_TEXTURE0 + texture_unit);
-//            //glBindTexture(GL_TEXTURE_2D, testingQuad_tex.handle);
-//            //glBindTexture(GL_TEXTURE_2D, texShadow);
-//
+//            testShader.uniform1i("texShadow", 1);
 //
 //            Model quad = makeQuad();
 //            glBindVertexArray(quad.vao);
@@ -432,6 +433,9 @@ public:
             // 1. Draw map
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
             drawModel(defaultShader, map.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+            
+            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+            drawModel(defaultShader, ocean.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
             
             // 2. Draw hangar
@@ -690,7 +694,10 @@ private:
         float heightMult = 5.f;
         float scale = 200.f;
         noise::module::Perlin perlinGenerator;
-    } map;
+    };
+    
+    Map map;
+    Map ocean;
 
 	struct Planet {
 		Vector3f position;

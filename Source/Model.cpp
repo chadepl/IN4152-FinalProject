@@ -257,28 +257,66 @@ Model loadModel(std::string path)
     return model;
 }
 
-//float[][] buildHeightMap(float x, float z){
-//    return rand() % 2;
-//}
 
-float getNoiseValue(noise::module::Perlin perlinGenerator, float posX, float posZ){
-    float elevation = 1 * perlinGenerator.GetValue(1 * posX, 0, 1 * posZ)
+
+float getNoiseValue(noise::module::Perlin perlinGenerator, float posX, float posZ, bool isWater){
+    float elevation;
+    if (!isWater) {
+        elevation = 1 * perlinGenerator.GetValue(1 * posX, 0, 1 * posZ)
         + 0.5 * perlinGenerator.GetValue(2 * posX, 0, 2 * posZ)
         + 0.25 * perlinGenerator.GetValue(4 * posX, 0, 4 * posZ);
-    elevation = pow(elevation, 3);
+        elevation = pow(elevation, 3);
+    } else {
+        elevation = 1 * perlinGenerator.GetValue(6 * posX, 0, 6 * posZ);
+    }
     return elevation;
 }
 
 float getHeightMapPoint(Vector3f point, noise::module::Perlin perlinGenerator, float scale, float heightMult){
-    float value = getNoiseValue(perlinGenerator, (point.x+(scale/2))/scale, (point.z+(scale/2))/scale);
+    float value = getNoiseValue(perlinGenerator, (point.x+(scale/2))/scale, (point.z+(scale/2))/scale, false);
     return heightMult * value;
 }
+
+
+Vector3f WATER = Vector3f(0.2f, 0.6f, 1.f) * 0.5;
+Vector3f BEACH = Vector3f(1.f, 0.8f, 0.4f) * 0.5;
+Vector3f FOREST = Vector3f(0.f, 0.2f, 0.f) * 0.5;
+Vector3f JUNGLE = Vector3f(0.2f, 0.8f, 0.2f) * 0.5;
+Vector3f SAVANNAH = Vector3f(1.f, 0.8f, 0.f) * 0.5;
+Vector3f DESERT = Vector3f(1.f, 0.4f, 0.f) * 0.5;
+Vector3f SNOW = Vector3f(1.f, 1.f, 1.f) * 0.5;
+
+Vector3f getColor(float e, bool isWater){
+    if (!isWater){
+        if (e < 0.1) return WATER;
+        else if (e < 0.2) return BEACH;
+        else if (e < 0.3) return FOREST;
+        else if (e < 0.5) return JUNGLE;
+        else if (e < 0.7) return SAVANNAH;
+        else if (e < 0.9) return DESERT;
+        else return SNOW;
+    } else {
+        return WATER;
+    }
+}
+
+//void updateMapValues(Model& model){
+//    std::vector<Vector3f> updatedVertices;
+//    for (std::vector<Vector3f>::iterator it = model.vertices.begin() ; it != model.vertices.end(); ++it){
+//        Vector3f vertex = *it;
+//        vertex.y = vertex.y + 0.5;
+//        updatedVertices.push_back(vertex);
+//    }
+//    
+//    glBindVertexArray(model.vao);
+//    BufferSubData( enum target, intptr offset, sizeiptr size, const void *data );
+//}
 
 
 // Makes map
 // Resolution refers to the number of squares (x2 number of triangles) per side
 // Maps is always generated as a square of size 1
-Model makeMap(noise::module::Perlin perlinGenerator, float perlinSize, int resolution, float heightMult, float scale)
+Model makeTerrain(noise::module::Perlin perlinGenerator, float perlinSize, int resolution, float heightMult, float scale, bool isWater)
 {
     
     Model model;
@@ -299,20 +337,20 @@ Model makeMap(noise::module::Perlin perlinGenerator, float perlinSize, int resol
             float pos1z = j * terrain_offset - (scale/2);
             float pos2z = ((j + 1) * terrain_offset) - (scale/2);
             
-            float perlin11 = getNoiseValue(perlinGenerator, s1x, s1z);
-            Vector3f color11 = getColor(perlin11);
+            float perlin11 = getNoiseValue(perlinGenerator, s1x, s1z, isWater);
+            Vector3f color11 = getColor(perlin11, isWater);
             Vector3f point11 = Vector3f(pos1x, heightMult * perlin11, pos1z);
             
-            float perlin12 = getNoiseValue(perlinGenerator, s1x, s2z);
-            Vector3f color12 = getColor(perlin12);
+            float perlin12 = getNoiseValue(perlinGenerator, s1x, s2z, isWater);
+            Vector3f color12 = getColor(perlin12, isWater);
             Vector3f point12 = Vector3f(pos1x, heightMult * perlin12, pos2z);
             
-            float perlin21 = getNoiseValue(perlinGenerator, s2x, s1z);
-            Vector3f color21 = getColor(perlin21);
+            float perlin21 = getNoiseValue(perlinGenerator, s2x, s1z, isWater);
+            Vector3f color21 = getColor(perlin21, isWater);
             Vector3f point21 = Vector3f(pos2x, heightMult * perlin21, pos1z);
             
-            float perlin22 = getNoiseValue(perlinGenerator, s2x, s2z);
-            Vector3f color22 = getColor(perlin22);
+            float perlin22 = getNoiseValue(perlinGenerator, s2x, s2z, isWater);
+            Vector3f color22 = getColor(perlin22, isWater);
             Vector3f point22 = Vector3f(pos2x, heightMult * perlin22, pos2z);
             
             Vector3f P, Q;
@@ -386,39 +424,39 @@ Model makeMap(noise::module::Perlin perlinGenerator, float perlinSize, int resol
     GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, model.vertices.size() * sizeof(Vector3f), model.vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, model.vertices.size() * sizeof(Vector3f), model.vertices.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
     
     GLuint nbo;
     glGenBuffers(1, &nbo);
     glBindBuffer(GL_ARRAY_BUFFER, nbo);
-    glBufferData(GL_ARRAY_BUFFER, model.normals.size() * sizeof(Vector3f), model.normals.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, model.normals.size() * sizeof(Vector3f), model.normals.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
     
     GLuint diffuse_bo;
     glGenBuffers(1, &diffuse_bo);
     glBindBuffer(GL_ARRAY_BUFFER, diffuse_bo);
-    glBufferData(GL_ARRAY_BUFFER, model.diffuseColors.size() * sizeof(Vector3f), model.diffuseColors.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, model.diffuseColors.size() * sizeof(Vector3f), model.diffuseColors.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(2);
     GLuint ambient_bo;
     glGenBuffers(1, &ambient_bo);
     glBindBuffer(GL_ARRAY_BUFFER, ambient_bo);
-    glBufferData(GL_ARRAY_BUFFER, model.ambientColors.size() * sizeof(Vector3f), model.ambientColors.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, model.ambientColors.size() * sizeof(Vector3f), model.ambientColors.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(3);
     GLuint specular_bo;
     glGenBuffers(1, &specular_bo);
     glBindBuffer(GL_ARRAY_BUFFER, specular_bo);
-    glBufferData(GL_ARRAY_BUFFER, model.specularColors.size() * sizeof(Vector3f), model.specularColors.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, model.specularColors.size() * sizeof(Vector3f), model.specularColors.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(4);
     GLuint shininess_bo;
     glGenBuffers(1, &shininess_bo);
     glBindBuffer(GL_ARRAY_BUFFER, shininess_bo);
-    glBufferData(GL_ARRAY_BUFFER, model.shininessValues.size() * sizeof(Vector3f), model.shininessValues.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, model.shininessValues.size() * sizeof(Vector3f), model.shininessValues.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(5);
     
@@ -428,7 +466,7 @@ Model makeMap(noise::module::Perlin perlinGenerator, float perlinSize, int resol
         GLuint tbo;
         glGenBuffers(1, &tbo);
         glBindBuffer(GL_ARRAY_BUFFER, tbo);
-        glBufferData(GL_ARRAY_BUFFER, model.texCoords.size() * sizeof(Vector2f), model.texCoords.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, model.texCoords.size() * sizeof(Vector2f), model.texCoords.data(), GL_DYNAMIC_DRAW);
         glVertexAttribPointer(6, 2, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(6);
     }
@@ -436,23 +474,6 @@ Model makeMap(noise::module::Perlin perlinGenerator, float perlinSize, int resol
     return model;
 }
 
-Vector3f WATER = Vector3f(0.2f, 0.6f, 1.f) * 0.5;
-Vector3f BEACH = Vector3f(1.f, 0.8f, 0.4f) * 0.5;
-Vector3f FOREST = Vector3f(0.f, 0.2f, 0.f) * 0.5;
-Vector3f JUNGLE = Vector3f(0.2f, 0.8f, 0.2f) * 0.5;
-Vector3f SAVANNAH = Vector3f(1.f, 0.8f, 0.f) * 0.5;
-Vector3f DESERT = Vector3f(1.f, 0.4f, 0.f) * 0.5;
-Vector3f SNOW = Vector3f(1.f, 1.f, 1.f) * 0.5;
-
-Vector3f getColor(float e){
-    if (e < 0.1) return WATER;
-    else if (e < 0.2) return BEACH;
-    else if (e < 0.3) return FOREST;
-    else if (e < 0.5) return JUNGLE;
-    else if (e < 0.7) return SAVANNAH;
-    else if (e < 0.9) return DESERT;
-    else return SNOW;
-}
 
 Model loadCube(){
     
