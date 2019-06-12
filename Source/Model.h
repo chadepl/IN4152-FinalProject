@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <string>
+#include <noise/noise.h> // used for the Perlin noise generation
 
 class Model
 {
@@ -32,7 +33,8 @@ public:
 
 Model loadModel(std::string path);
 Model loadModelWithMaterials(std::string path);
-Model makeMap(int resolution, float perlinSize, Vector3f translation, float heightMult, float size);
+Model makeMap(noise::module::Perlin perlinGenerator, float perlinSize, int resolution, float heightMult, float scale);
+float getHeightMapPoint(Vector3f point, noise::module::Perlin perlinGenerator, float scale, float heightMult);
 Model loadCube();
 Model makeQuad();
 Vector3f getColor(float height);

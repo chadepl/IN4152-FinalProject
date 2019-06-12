@@ -13,7 +13,7 @@
 #include <array>
 #include <vector>
 
-#include <noise/noise.h>
+#include <noise/noise.h> // used for the Perlin noise generation
 
 Model loadModelWithMaterials(std::string path)
 {
@@ -269,52 +269,49 @@ float getNoiseValue(noise::module::Perlin perlinGenerator, float posX, float pos
     return elevation;
 }
 
+float getHeightMapPoint(Vector3f point, noise::module::Perlin perlinGenerator, float scale, float heightMult){
+    float value = getNoiseValue(perlinGenerator, (point.x+(scale/2))/scale, (point.z+(scale/2))/scale);
+    return heightMult * value;
+}
+
 
 // Makes map
 // Resolution refers to the number of squares (x2 number of triangles) per side
 // Maps is always generated as a square of size 1
-Model makeMap(int resolution, float perlinSize, Vector3f translation, float heightMult, float scale)
+Model makeMap(noise::module::Perlin perlinGenerator, float perlinSize, int resolution, float heightMult, float scale)
 {
     
     Model model;
-    srand(time(0));
-    
-    std::cout << "REsolution: " << resolution << std::endl;
     
     float offset = (float) perlinSize/resolution;
-    Vector3f normalizedTranslation = translation/scale;
+    
+    int mapData[resolution + 1][resolution + 1];
 
-    // Initialize noise
-    noise::module::Perlin myModule;
     
     for (int i = 0; i < resolution; i++) {
         for (int j = 0; j < resolution; j++) {
             
-            float pos1x = normalizedTranslation.x + i * offset;
-            float pos2x = normalizedTranslation.x + ((i + 1) * offset);
+            float pos1x = i * offset;
+            float pos2x = ((i + 1) * offset);
             
-            float pos1z = normalizedTranslation.z + j * offset;
-            float pos2z = normalizedTranslation.z + ((j + 1) * offset);
+            float pos1z = j * offset;
+            float pos2z = ((j + 1) * offset);
             
-            float perlin11 = getNoiseValue(myModule, pos1x, pos1z);
-            float height11 = heightMult * perlin11;
+            float perlin11 = getNoiseValue(perlinGenerator, pos1x, pos1z);
             Vector3f color11 = getColor(perlin11);
-            Vector3f point11 = Vector3f(pos1x * scale - (scale/2), height11, pos1z * scale - (scale/2));
+            Vector3f point11 = Vector3f(pos1x * scale - (scale/2), heightMult * perlin11, pos1z * scale - (scale/2));
             
-            float perlin12 = getNoiseValue(myModule, pos1x, pos2z);
-            float height12 = heightMult * perlin12;
+            float perlin12 = getNoiseValue(perlinGenerator, pos1x, pos2z);
             Vector3f color12 = getColor(perlin12);
-            Vector3f point12 = Vector3f(pos1x * scale - (scale/2), height12, pos2z * scale - (scale/2));
+            Vector3f point12 = Vector3f(pos1x * scale - (scale/2), heightMult * perlin12, pos2z * scale - (scale/2));
             
-            float perlin21 = getNoiseValue(myModule, pos2x, pos1z);
-            float height21 = heightMult * perlin21;
+            float perlin21 = getNoiseValue(perlinGenerator, pos2x, pos1z);
             Vector3f color21 = getColor(perlin21);
-            Vector3f point21 = Vector3f(pos2x * scale - (scale/2), height21, pos1z * scale - (scale/2));
+            Vector3f point21 = Vector3f(pos2x * scale - (scale/2), heightMult * perlin21, pos1z * scale - (scale/2));
             
-            float perlin22 = getNoiseValue(myModule, pos2x, pos2z);
-            float height22 = heightMult * perlin22;
+            float perlin22 = getNoiseValue(perlinGenerator, pos2x, pos2z);
             Vector3f color22 = getColor(perlin22);
-            Vector3f point22 = Vector3f(pos2x * scale - (scale/2), height22, pos2z * scale - (scale/2));
+            Vector3f point22 = Vector3f(pos2x * scale - (scale/2), heightMult * perlin22, pos2z * scale - (scale/2));
             
             Vector3f P, Q;
             Vector3f normalVec;

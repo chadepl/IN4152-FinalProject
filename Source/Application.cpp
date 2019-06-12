@@ -20,6 +20,8 @@
 #include <map>
 #include <string>
 
+#include <noise/noise.h> // used for the Perlin noise generation
+
 #ifndef M_PI
 	#define M_PI 3.14159265358979323846
 #endif
@@ -145,7 +147,7 @@ public:
     void init()
     {
         window.setGlVersion(3, 3, true);
-		window.create("Final Project", 1024, 1024);
+		window.create("Grand Theft Spacecraft", 1024, 1024);
         
         // Viewport for camera calculations
         glViewport(0, 0, WIDTH, HEIGHT);
@@ -154,7 +156,21 @@ public:
 		// Capture mouse pointer to look around (sneakily get real glfwWindow)
 		glfwSetInputMode(window.windowPointer(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         
+        
         // INIT GAME STATE
+        srand(time(0));
+        
+        // -- light
+        
+        light.position = Vector3f(0.f, 40.f, 0.f);
+        light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f), Vector3f(0.f, 1.f, 0.f));
+        light.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
+        
+        light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
+        light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
+        light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
+        
+        // -- general game state
         
         game.characterPosition = Vector3f(0.f, 10.f, 0.f); //3.5f, 2.f, -3.f
 		cameraPos = game.characterPosition + -cameraTarget * 2.f;
@@ -167,21 +183,10 @@ public:
         game.hangarScalingFactor = 1.f;
         game.turboModeOn = false;
         
-        // -- light
+        // -- loading models
         
-        light.position = Vector3f(3.f, 40.f, 8.f);
-        light.viewMatrix = lookAtMatrix(light.position, game.characterPosition, Vector3f(0.f, 1.f, 0.f));
-        light.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
-        
-        light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
-        light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
-        light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
-        
-        
-        // LOADING MODELS
-        
-        map.center = Vector3f(game.characterPosition.x, 0.f, game.characterPosition.z);
-        map.model = makeMap(map.resolution, map.perlinSize, game.characterPosition, map.heightMult, map.scale);
+        map.center = Vector3f(0.f);
+        map.model = makeMap(map.perlinGenerator, map.perlinSize, map.resolution, map.heightMult, map.scale);
 
 		//spacecraft = loadModel("Resources/spacecraft.obj");
         spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
@@ -317,15 +322,16 @@ public:
             
             updateGameState();
             
+//            glBindFramebuffer(GL_FRAMEBUFFER, 0);
 //            glClearColor(0.94f, 1.f, 1.f, 1.f);
 //            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 //
 //            skySphereShader.bind();
 //            skySphereShader.uniformMatrix4f("projMatrix", projMatrix);
 //            skySphereShader.uniformMatrix4f("viewMatrix", viewMatrix);
+//
+//            drawModel(skySphereShader, skybox, Vector3f(0.f, 0.f, 0.f), Vector3f(0.f), map.scale, false);
             
-            
-            //drawModel(skySphereShader, skybox, Vector3f(0.f, 0.f, 0.f), Vector3f(0.f), 10.f, false);
             
             drawScene(true);
             
@@ -639,6 +645,7 @@ private:
     const int HEIGHT = 1024;
     
     // Game state
+    
     struct Game {
         
         bool characterTurboModeOn;
@@ -662,6 +669,7 @@ private:
         Model model;
         float heightMult = 5.f;
         float scale = 200.f;
+        noise::module::Perlin perlinGenerator;
     } map;
 
 	struct Planet {
