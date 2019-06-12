@@ -93,9 +93,9 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 		int nMaterial = model.materials.size();
 
 		// Bind texture of the model
+        glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textureHandles[model.materials[0].diffuse_texname]);
-		glActiveTexture(GL_TEXTURE0);
-        //shader.uniform1f("colorMap", textureHandles[model.materials[0].diffuse_texname]);
+        shader.uniform1i("colorMap", 0);
 	}
 
 	
@@ -126,7 +126,9 @@ void drawPlanet(ShaderProgram& shader, const Model& model, Vector3f& position, V
 		int nMaterial = model.materials.size();
 
 		// Bind texture of the model
+        glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textureHandles[model.materials[0].diffuse_texname]);
+        shader.uniform1i("colorMap", 0);
 	}
 
 
@@ -162,7 +164,7 @@ public:
         
         // -- light
         
-        light.position = Vector3f(0.f, 40.f, 0.f);
+        light.position = Vector3f(0.f, 10.f, 0.f);
         light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f), Vector3f(0.f, 1.f, 0.f));
         light.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
         
@@ -190,25 +192,30 @@ public:
         
         map.center = Vector3f(0.f);
         map.model = makeMap(map.perlinGenerator, map.perlinSize, map.resolution, map.heightMult, map.scale);
-
-		//spacecraft = loadModel("Resources/spacecraft.obj");
+		
         spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
         
         // Obstacles ... this is an example, they should be added procedurally
         //arcTest = loadModelWithMaterials("Resources/obstacleArc.obj");
         
-        /*for (int i = 0; i < 10; ++i) {
-            std::cout << "Loading obstacle: " << i << std::endl;
+        for (int i = 0; i < 30; ++i) {
             Obstacle newObstacle;
-            
+         
             float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
-            newObstacle.position = Vector3f(randomPositionX, 10.f, 0.f);
+            float randomPositionZ = rand()%(int)round(map.scale) - (int)round(map.scale/2);
+            float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.scale, map.heightMult);
+            
+            newObstacle.position = Vector3f(randomPositionX, height + 10, randomPositionZ);
             newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj");
             newObstacle.scaling = 1.f;
             newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
             obstacles.push_back(newObstacle);
-        }*/
+            std::cout << "Loading obstacle: " << i << std::endl;
+            std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
+        }
         
+        skybox = loadModelWithMaterials("Resources/skysphereblue.obj");
+        skybox_texture = loadImage("Resources/" + skybox.materials[0].diffuse_texname);
 
         earth = loadModelWithMaterials("Resources/gijsEarth.obj");
         earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
@@ -216,9 +223,6 @@ public:
 		mars_texture = loadImage("Resources/" + mars.materials[0].diffuse_texname);
 		pinkplanet = loadModelWithMaterials("Resources/pink.obj");
 		pink_texture = loadImage("Resources/" + pinkplanet.materials[0].diffuse_texname);
-		
-		skybox = loadModelWithMaterials("Resources/skysphereblue.obj");
-		skybox_texture = loadImage("Resources/" + skybox.materials[0].diffuse_texname);
 
 		pEarth.position = Vector3f(0.f, 30.f, 0.f);
 		pEarth.rotationAngle = 0.f;
@@ -238,7 +242,7 @@ public:
 
         // testing models
         testingQuad = makeQuad();
-        testingQuad_tex = loadImage("Resources/earth-square.jpg");
+        //testingQuad_tex = loadImage("Resources/earth-square.jpg");
         lightCube = loadCube();//loadModel("Resources/cube.obj");
         
         /////
@@ -342,7 +346,7 @@ public:
             
             // TESTING
             
-            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 //            testShader.bind();
 //            glViewport(0, 0, WIDTH * 2, HEIGHT *2);
 //            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -358,7 +362,7 @@ public:
 //            Model quad = makeQuad();
 //            glBindVertexArray(quad.vao);
 //            glDrawArrays(GL_TRIANGLES, 0, quad.vertices.size());
-//
+
             
             // Processes input and swaps the window buffer
             window.update();
@@ -369,12 +373,9 @@ public:
     void drawScene(bool forComputingShadows) {
         
 		cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f,0))  *2.f;
-		
-		
         Matrix4f viewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
         Matrix4f projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
         
-        //ShaderProgram& shader = defaultShader;
         if(!forComputingShadows){
             defaultShader.bind();
 			#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
@@ -388,11 +389,10 @@ public:
             glClearColor(0.94f, 1.f, 1.f, 1.f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             
-            // Bind the shadow map to texture slot 0
-            GLint texture_unit = 5;
-            glActiveTexture(GL_TEXTURE0 + texture_unit);
+            // Bind the shadow map to texture slot 0            
+            glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, texShadow);
-            defaultShader.uniform1i("shadowMap", texture_unit);
+            defaultShader.uniform1i("shadowMap", 1);
             
             defaultShader.uniformMatrix4f("projMatrix", projMatrix);
             defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
@@ -426,8 +426,6 @@ public:
             shadowShader.uniformMatrix4f("viewMatrix", light.viewMatrix);
             shadowShader.uniform3f("viewPos", light.position);
             
-            //shader = shadowShader;
-            
         }
         
         if(!forComputingShadows){
@@ -446,26 +444,25 @@ public:
             drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
             
             // 4. Draw moving planets
-
-			pEarth.rotationAngle += 0.1f;
-			pMars.rotationAngle += 0.05f;
-			pTest.rotationAngle += 0.01f;
-			drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 4.f);
-			drawPlanet(defaultShader, mars, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position, 25.f);
-			drawPlanet(defaultShader, pinkplanet, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 1.5f, pMars.position, 12.f);
+//            drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 4.f);
+//            drawPlanet(defaultShader, mars, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position, 25.f);
+//            drawPlanet(defaultShader, pinkplanet, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 1.5f, pMars.position, 12.f);
 
 
             // 5. Draw arcs
-            /*for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
+            for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
                 Obstacle obs = *it;
                 drawModel(defaultShader, obs.model, obs.position, obs.rotation, obs.scaling);
-            }*/
+            }
             
+            // 6. Skyboxes
             
-            // 6. Draw OTHER stuff
-                //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
-            drawModel(defaultShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale);
+            drawModel(defaultShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale/2);
+            
+            
+            // 7. Draw OTHER stuff
+                //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
 
 
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
@@ -475,7 +472,7 @@ public:
             //drawModel(defaultShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
             
             defaultShader.uniform1i("forTesting", 1); // REMOVE at the end
-            //drawModel(defaultShader, lightCube, Vector3f(0.f, 15.f, 0.f));
+            drawModel(defaultShader, lightCube, light.position);
             
             //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
             //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
@@ -495,6 +492,10 @@ public:
             // 4. Draw moving planets
             
             // 5. Draw arcs
+            for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
+                Obstacle obs = *it;
+                drawModel(shadowShader, obs.model, obs.position, obs.rotation, obs.scaling);
+            }
             
             // 6. Draw OTHER stuff
             
@@ -535,13 +536,12 @@ public:
             movementSpeed = 0.05f;
         }
         
+        pEarth.rotationAngle += 0.1f;
+        pMars.rotationAngle += 0.05f;
+        pTest.rotationAngle += 0.01f;
+        
         // Check, for all the arcs if the spaceship has traversed them and change something if thats the case.
         
-        
-        
-        if(false){ // distance between player and center of the map            
-            //map.model = makeMap(map.center, 100, 1.f, 1.f);
-        }
         
         
     }

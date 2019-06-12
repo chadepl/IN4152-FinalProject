@@ -283,35 +283,37 @@ Model makeMap(noise::module::Perlin perlinGenerator, float perlinSize, int resol
     
     Model model;
     
-    float offset = (float) perlinSize/resolution;
-    
-    int mapData[resolution + 1][resolution + 1];
-
+    float sampling_offset = (float) perlinSize/resolution;
+    float terrain_offset = (float) scale/resolution;
     
     for (int i = 0; i < resolution; i++) {
         for (int j = 0; j < resolution; j++) {
             
-            float pos1x = i * offset;
-            float pos2x = ((i + 1) * offset);
+            float s1x = i * sampling_offset;
+            float s2x = ((i + 1) * sampling_offset);
+            float s1z = j * sampling_offset;
+            float s2z = ((j + 1) * sampling_offset);
             
-            float pos1z = j * offset;
-            float pos2z = ((j + 1) * offset);
+            float pos1x = i * terrain_offset - (scale/2);
+            float pos2x = ((i + 1) * terrain_offset) - (scale/2);
+            float pos1z = j * terrain_offset - (scale/2);
+            float pos2z = ((j + 1) * terrain_offset) - (scale/2);
             
-            float perlin11 = getNoiseValue(perlinGenerator, pos1x, pos1z);
+            float perlin11 = getNoiseValue(perlinGenerator, s1x, s1z);
             Vector3f color11 = getColor(perlin11);
-            Vector3f point11 = Vector3f(pos1x * scale - (scale/2), heightMult * perlin11, pos1z * scale - (scale/2));
+            Vector3f point11 = Vector3f(pos1x, heightMult * perlin11, pos1z);
             
-            float perlin12 = getNoiseValue(perlinGenerator, pos1x, pos2z);
+            float perlin12 = getNoiseValue(perlinGenerator, s1x, s2z);
             Vector3f color12 = getColor(perlin12);
-            Vector3f point12 = Vector3f(pos1x * scale - (scale/2), heightMult * perlin12, pos2z * scale - (scale/2));
+            Vector3f point12 = Vector3f(pos1x, heightMult * perlin12, pos2z);
             
-            float perlin21 = getNoiseValue(perlinGenerator, pos2x, pos1z);
+            float perlin21 = getNoiseValue(perlinGenerator, s2x, s1z);
             Vector3f color21 = getColor(perlin21);
-            Vector3f point21 = Vector3f(pos2x * scale - (scale/2), heightMult * perlin21, pos1z * scale - (scale/2));
+            Vector3f point21 = Vector3f(pos2x, heightMult * perlin21, pos1z);
             
-            float perlin22 = getNoiseValue(perlinGenerator, pos2x, pos2z);
+            float perlin22 = getNoiseValue(perlinGenerator, s2x, s2z);
             Vector3f color22 = getColor(perlin22);
-            Vector3f point22 = Vector3f(pos2x * scale - (scale/2), heightMult * perlin22, pos2z * scale - (scale/2));
+            Vector3f point22 = Vector3f(pos2x, heightMult * perlin22, pos2z);
             
             Vector3f P, Q;
             Vector3f normalVec;
