@@ -178,6 +178,10 @@ public:
         map.center = Vector3f(game.characterPosition.x, 0.f, game.characterPosition.z);
         map.model = makeMap(map.center, 100, 5.f, 50.f);
 
+		minimap.position = Vector3f(map.center.x, 15.f, map.center.z);
+		minimap.viewMatrix = lookAtMatrix(minimap.position, map.center, Vector3f(0.f, 1.f, 0.f));
+		minimap.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
+
 		//spacecraft = loadModel("Resources/spacecraft.obj");
         spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
         
@@ -230,6 +234,18 @@ public:
             testShader.addShader(VERTEX, "Resources/test.vert");
             testShader.addShader(FRAGMENT, "Resources/test.frag");
             testShader.build();
+
+			minimapShader.create();
+			minimapShader.addShader(VERTEX, "Resources/minimap.vert");
+			minimapShader.addShader(FRAGMENT, "Resources/minimap.frag");
+			minimapShader.build();
+
+			minimapShader2.create();
+			minimapShader2.addShader(VERTEX, "Resources/minimaptest.vert");
+			minimapShader2.addShader(FRAGMENT, "Resources/minimaptest.frag");
+			minimapShader2.build();
+
+
         }
         catch (ShaderLoadingException e)
         {
@@ -248,6 +264,38 @@ public:
 
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+
+
+		/// Mini Map /////
+		
+		glGenFramebuffers(1, &minimapBuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, minimapBuffer);
+
+		// generate texture
+
+		glGenTextures(1, &texColorBuffer);
+		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		// attach it to currently bound framebuffer object
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+
+		//glGenRenderbuffers(1, &rbo);
+		//glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+		//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 800, 600);
+		//glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+		//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+
         
         
         //////////////////// SHADOW MAP
@@ -288,28 +336,33 @@ public:
             
             updateGameState();
             
-            drawScene(true);
-            
-            drawScene(false);
-            
+            //drawScene(true);
+            //
+            //drawScene(false);
+			drawMiniMap();
             // TESTING
             
-            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-//            testShader.bind();
-//            glViewport(0, 0, WIDTH * 2, HEIGHT *2);
-//            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-//            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//
-//            // Bind the shadow map to texture slot 0
-//            testShader.uniform1i("texShadow", 5);
-//            //glActiveTexture(GL_TEXTURE0 + texture_unit);
-//            //glBindTexture(GL_TEXTURE_2D, testingQuad_tex.handle);
-//            //glBindTexture(GL_TEXTURE_2D, texShadow);
-//
-//
-//            Model quad = makeQuad();
-//            glBindVertexArray(quad.vao);
-//            glDrawArrays(GL_TRIANGLES, 0, quad.vertices.size());
+            ////glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            //testShader.bind();
+            //glViewport(0, 0, WIDTH * 2, HEIGHT *2);
+            //glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            //// Bind the shadow map to texture slot 0
+            //testShader.uniform1i("texShadow", 5);
+            ////glActiveTexture(GL_TEXTURE0 + texture_unit);
+            ////glBindTexture(GL_TEXTURE_2D, testingQuad_tex.handle);
+            ////glBindTexture(GL_TEXTURE_2D, texShadow);
+
+			//minimapShader.bind();
+			//
+			//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			//glDisable(GL_DEPTH_TEST);
+			//glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+			//minimapShader.uniform1i("screenTexture", 0);
+   //         Model quad = makeQuad();
+   //         glBindVertexArray(quad.vao);
+   //         glDrawArrays(GL_TRIANGLES, 0, quad.vertices.size());
 //
             
             // Processes input and swaps the window buffer
@@ -450,6 +503,46 @@ public:
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
     }
+
+	void drawMiniMap() {
+		glViewport(0, 0, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
+		//glBindFramebuffer(GL_FRAMEBUFFER, minimapBuffer);
+		glClearColor(0.f, 0.f, 1.f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
+		glEnable(GL_DEPTH_TEST);
+
+		minimapShader2.bind();
+		// Bind the shadow map to texture slot 0
+		//GLint texture_unit = 7;
+		//glActiveTexture(GL_TEXTURE0+2);
+		//glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+		//defaultShader.uniform1i("shadowMap", texture_unit);
+
+		minimapShader2.uniformMatrix4f("projMatrix", minimap.projectionMatrix);
+		minimapShader2.uniformMatrix4f("viewMatrix", minimap.viewMatrix);
+
+		//defaultShader.uniformMatrix4f("light.projectionMatrix", light.projectionMatrix);
+		//defaultShader.uniformMatrix4f("light.viewMatrix", light.viewMatrix);
+		//defaultShader.uniform3f("light.position", light.position);
+		//defaultShader.uniform3f("light.ambientColor", light.ambientColor);
+		//defaultShader.uniform3f("light.diffuseColor", light.diffuseColor);
+		//defaultShader.uniform3f("light.specularColor", light.specularColor);
+		//defaultShader.uniform1f("light.lightPower", 20.f);
+
+		//defaultShader.uniform3f("viewPos", minimap.position);
+		//defaultShader.uniform1i("turboModeOn", game.turboModeOn);
+
+		// 1. Draw map
+		drawModel(minimapShader2, map.model, Vector3f(-0.5f, 0.f, 0.f), Vector3f(rotateAngle, rotateAngle * 2, rotateAngle * 0.8), 1.f);
+
+		// 2. Draw hangar
+		// drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
+
+		// 3. Draw spacecraft
+		//drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, 0), game.characterScalingFactor, true);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
+	}
     
     // Method for updating the game state after each interaction
     void updateGameState(){
@@ -593,6 +686,12 @@ private:
 		Vector3f position;
 		float rotationAngle;
 	};
+
+	struct MiniMap {
+		Vector3f position;
+		Matrix4f viewMatrix;
+		Matrix4f projectionMatrix;
+	} minimap;
     
     // Light
     struct Light {
@@ -608,6 +707,8 @@ private:
     ShaderProgram defaultShader;
     ShaderProgram testShader;
     ShaderProgram shadowShader;
+	ShaderProgram minimapShader;
+	ShaderProgram minimapShader2;
 
     // Projection and view matrices for you to fill in and use
     Matrix4f projMatrix;
@@ -655,6 +756,11 @@ private:
     const int SHADOWTEX_HEIGHT = 1024;
     GLuint texShadow;
     GLuint framebuffer;
+
+	// Minimap
+	GLuint minimapBuffer;
+	GLuint texColorBuffer;
+	GLuint rbo;
 };
 
 int main()

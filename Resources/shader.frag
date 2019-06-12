@@ -1,6 +1,6 @@
 #version 330
 
-//uniform sampler2D colorMap;
+uniform sampler2D colorMap;
 uniform sampler2D shadowMap;
 
 uniform int forTesting;

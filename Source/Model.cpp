@@ -391,31 +391,31 @@ Model makeMap(Vector3f center, int resolution, float heightMult, float size)
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
     
-    GLuint diffuse_bo;
-    glGenBuffers(1, &diffuse_bo);
-    glBindBuffer(GL_ARRAY_BUFFER, diffuse_bo);
-    glBufferData(GL_ARRAY_BUFFER, model.diffuseColors.size() * sizeof(Vector3f), model.diffuseColors.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(2);
-    GLuint ambient_bo;
-    glGenBuffers(1, &ambient_bo);
-    glBindBuffer(GL_ARRAY_BUFFER, ambient_bo);
-    glBufferData(GL_ARRAY_BUFFER, model.ambientColors.size() * sizeof(Vector3f), model.ambientColors.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(3);
-    GLuint specular_bo;
-    glGenBuffers(1, &specular_bo);
-    glBindBuffer(GL_ARRAY_BUFFER, specular_bo);
-    glBufferData(GL_ARRAY_BUFFER, model.specularColors.size() * sizeof(Vector3f), model.specularColors.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(4);
-    GLuint shininess_bo;
-    glGenBuffers(1, &shininess_bo);
-    glBindBuffer(GL_ARRAY_BUFFER, shininess_bo);
-    glBufferData(GL_ARRAY_BUFFER, model.shininessValues.size() * sizeof(Vector3f), model.shininessValues.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(5);
-    
+    //GLuint diffuse_bo;
+    //glGenBuffers(1, &diffuse_bo);
+    //glBindBuffer(GL_ARRAY_BUFFER, diffuse_bo);
+    //glBufferData(GL_ARRAY_BUFFER, model.diffuseColors.size() * sizeof(Vector3f), model.diffuseColors.data(), GL_STATIC_DRAW);
+    //glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    //glEnableVertexAttribArray(2);
+    //GLuint ambient_bo;
+    //glGenBuffers(1, &ambient_bo);
+    //glBindBuffer(GL_ARRAY_BUFFER, ambient_bo);
+    //glBufferData(GL_ARRAY_BUFFER, model.ambientColors.size() * sizeof(Vector3f), model.ambientColors.data(), GL_STATIC_DRAW);
+    //glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    //glEnableVertexAttribArray(3);
+    //GLuint specular_bo;
+    //glGenBuffers(1, &specular_bo);
+    //glBindBuffer(GL_ARRAY_BUFFER, specular_bo);
+    //glBufferData(GL_ARRAY_BUFFER, model.specularColors.size() * sizeof(Vector3f), model.specularColors.data(), GL_STATIC_DRAW);
+    //glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    //glEnableVertexAttribArray(4);
+    //GLuint shininess_bo;
+    //glGenBuffers(1, &shininess_bo);
+    //glBindBuffer(GL_ARRAY_BUFFER, shininess_bo);
+    //glBufferData(GL_ARRAY_BUFFER, model.shininessValues.size() * sizeof(Vector3f), model.shininessValues.data(), GL_STATIC_DRAW);
+    //glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, 0);
+    //glEnableVertexAttribArray(5);
+    //
     
     if (model.texCoords.size() > 0)
     {
