@@ -75,7 +75,7 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 	if (spacecraft) {
 		modelMatrix.rotate(rotation.y, 0, 1.f, 0);
 		modelMatrix.rotate(rotation.x, 1.f, 0, 0);
-
+		modelMatrix.rotate(rotation.z, 0, 0, 1.f);
 	}
 	else {
 		modelMatrix.rotate(rotation);
@@ -172,16 +172,19 @@ public:
         
         // -- general game state
         
-        game.characterPosition = Vector3f(0.f, 10.f, 0.f); //3.5f, 2.f, -3.f
+        game.characterPosition = Vector3f(0.f, 2.f, 0.f); //3.5f, 2.f, -3.f
 		cameraPos = game.characterPosition + -cameraTarget * 2.f;
 		std::cout << game.characterPosition << std::endl;
 		std::cout << cameraPos << std::endl;
         game.characterScalingFactor = .1f;
+		game.characterRoll = 0.f;
+		game.characterRollSensitivity = 0.5f;
         game.characterTurboModeOn = false;
         
         game.hangarPosition = Vector3f(0.f, 1.f, 0.f);
         game.hangarScalingFactor = 1.f;
         game.turboModeOn = false;
+		game.gameStart = false;
         
         // -- loading models
         
@@ -194,7 +197,7 @@ public:
         // Obstacles ... this is an example, they should be added procedurally
         //arcTest = loadModelWithMaterials("Resources/obstacleArc.obj");
         
-        for (int i = 0; i < 10; ++i) {
+        /*for (int i = 0; i < 10; ++i) {
             std::cout << "Loading obstacle: " << i << std::endl;
             Obstacle newObstacle;
             
@@ -204,7 +207,7 @@ public:
             newObstacle.scaling = 1.f;
             newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
             obstacles.push_back(newObstacle);
-        }
+        }*/
         
 
         earth = loadModelWithMaterials("Resources/gijsEarth.obj");
@@ -440,7 +443,7 @@ public:
             // 3. Draw spacecraft
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
 			
-            drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, 0), game.characterScalingFactor, true);
+            drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
             
             // 4. Draw moving planets
 
@@ -453,10 +456,10 @@ public:
 
 
             // 5. Draw arcs
-            for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
+            /*for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
                 Obstacle obs = *it;
                 drawModel(defaultShader, obs.model, obs.position, obs.rotation, obs.scaling);
-            }
+            }*/
             
             
             // 6. Draw OTHER stuff
@@ -487,7 +490,7 @@ public:
             drawModel(shadowShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);            
             
             // 3. Draw spacecraft
-            drawModel(shadowShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, 0), game.characterScalingFactor, true);
+            drawModel(shadowShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, game.characterRoll), game.characterScalingFactor, true);
             
             // 4. Draw moving planets
             
@@ -511,6 +514,9 @@ public:
     
     // Method for updating the game state after each frame
     void updateGameState(){
+		// Move character forward if user has pressed any key
+		if(game.gameStart)
+			game.characterPosition += cameraTarget.normalize() * movementSpeed;
         
         // Light updates
         
@@ -542,8 +548,12 @@ public:
 
 	// Apply camera transformations according to keyboard input
 	void processKeyboardInput() {
-		if (mKeyPressed.empty()) return;
+		if (mKeyPressed.empty()) {
+			game.characterRoll /= 1.25f;
+			return;
+		}
 
+		game.gameStart = true;
 
 		if (mKeyPressed[GLFW_KEY_W]) {
 			// Move forward using unit direction vector
@@ -559,13 +569,18 @@ public:
 		}
 		if (mKeyPressed[GLFW_KEY_A]) {
 			// cameraPos -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
-			game.characterPosition -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+			//game.characterPosition -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+			game.characterRoll -= 1.f;
 		}
 		if (mKeyPressed[GLFW_KEY_D]) {
-			game.characterPosition += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+			//game.characterPosition += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
 			// cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
-
-        }if (mKeyPressed[GLFW_KEY_T]) {
+			game.characterRoll += 1.f;
+		}
+		if(!mKeyPressed[GLFW_KEY_A] && !mKeyPressed[GLFW_KEY_D]){
+			game.characterRoll /= 1.25f;
+		}
+		if (mKeyPressed[GLFW_KEY_T]) {
             game.turboModeOn = !game.turboModeOn;
             // cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
         }
@@ -606,6 +621,9 @@ public:
 		last_x = x;
 		last_y = y;
         
+		// Roll spacecraft on yaw movement to mimic banked turn
+		game.characterRoll += x_off * game.characterRollSensitivity;
+
 		x_off = x_off * mouseSensitivity;
 		y_off = y_off * mouseSensitivity;
 
@@ -652,12 +670,14 @@ private:
         
         Vector3f characterPosition;
         float characterScalingFactor;
+		float characterRoll;
+		float characterRollSensitivity;
         
         Vector3f hangarPosition;
         float hangarScalingFactor;
         
         bool turboModeOn;
-        
+		bool gameStart;
     } game;
     
     // Computed in a square from 0 to 1
