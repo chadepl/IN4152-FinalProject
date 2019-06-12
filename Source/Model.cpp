@@ -81,7 +81,7 @@ Model loadModelWithMaterials(std::string path)
                 model.diffuseColors.push_back(Vector3f(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]));
                 model.ambientColors.push_back(Vector3f(mat.ambient[0], mat.ambient[1], mat.ambient[2]));
                 model.specularColors.push_back(Vector3f(mat.specular[0], mat.specular[1], mat.specular[2]));
-                model.shininessValues.push_back(mat.shininess);
+                model.shininessValues.push_back(20.f);//mat.shininess);
                 
                 if (attrib.texcoords.size() > 0 && idx.texcoord_index >= 0) {
                     tinyobj::real_t tx = attrib.texcoords[2 * idx.texcoord_index + 0];
@@ -89,10 +89,7 @@ Model loadModelWithMaterials(std::string path)
                     model.texCoords.push_back(Vector2f(tx, 1-ty));
                 }
                 
-                // Optional: vertex colors
-                // tinyobj::real_t red = attrib.colors[3*idx.vertex_index+0];
-                // tinyobj::real_t green = attrib.colors[3*idx.vertex_index+1];
-                // tinyobj::real_t blue = attrib.colors[3*idx.vertex_index+2];
+                
             }
             index_offset += fv;
             

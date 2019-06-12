@@ -168,15 +168,21 @@ public:
         
         // -- light
         
-        updateLight(Vector3f(game.characterPosition.x, 20.f, game.characterPosition.z),
-                    game.characterPosition, 60, 0.1, 100);
+        light.position = Vector3f(3.f, 40.f, 8.f);
+        light.viewMatrix = lookAtMatrix(light.position, game.characterPosition, Vector3f(0.f, 1.f, 0.f));
+        light.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
+        
+        light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
+        light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
+        light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
+        
         
         // LOADING MODELS
         
         // map
         map.resolution = 100;
         map.center = Vector3f(game.characterPosition.x, 0.f, game.characterPosition.z);
-        map.model = makeMap(100, 2.f,  game.characterPosition, 5.f, 200.f); 
+        map.model = makeMap(map.resolution, map.perlinSize, game.characterPosition, map.heightMult, map.scale);
 
 		//spacecraft = loadModel("Resources/spacecraft.obj");
         spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
@@ -184,7 +190,19 @@ public:
         // Obstacles ... this is an example, they should be added procedurally
         //arcTest = loadModelWithMaterials("Resources/obstacleArc.obj");
         
-        earth = loadModel("Resources/gijsEarth.obj");
+        for (int i = 0; i < 10; ++i) {
+            std::cout << "Loading obstacle: " << i << std::endl;
+            Obstacle newObstacle;
+            
+            float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
+            newObstacle.position = Vector3f(randomPositionX, 10.f, 0.f);
+            newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj");
+            newObstacle.scaling = 1.f;
+            newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
+            obstacles.push_back(newObstacle);
+        }
+        
+        earth = loadModelWithMaterials("Resources/gijsEarth.obj");
         earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
 		pEarth.position = Vector3f(0.f, 2.f, 0.f);
 		pEarth.rotationAngle = 0.f;
@@ -193,9 +211,6 @@ public:
 		pTest.position = Vector3f(10.f, 2.f, 12.f);
 		pTest.rotationAngle = 0.f;
 
-
-
-        
         hangar = loadModelWithMaterials("Resources/Hangar2.obj");
         hangar_roof = loadImage("Resources/" + hangar.materials[0].diffuse_texname);
 
@@ -273,11 +288,6 @@ public:
         
     }
     
-    void updateLight(Vector3f newPos,Vector3f newTarget,float fov, float near, float far){
-        light.position = newPos;
-        light.viewMatrix = lookAtMatrix(light.position, newTarget, Vector3f(0,1,0));
-        light.projectionMatrix = projectionProjectiveMatrix(fov, 1, near, far);
-    }
 
     void update()
     {
@@ -355,7 +365,7 @@ public:
             defaultShader.uniform3f("light.ambientColor", light.ambientColor);
             defaultShader.uniform3f("light.diffuseColor", light.diffuseColor);
             defaultShader.uniform3f("light.specularColor", light.specularColor);
-            defaultShader.uniform1f("light.lightPower", 20.f);
+            defaultShader.uniform1f("light.lightPower", light.power);
             
             defaultShader.uniform3f("viewPos", cameraPos);
             defaultShader.uniform1i("turboModeOn", game.turboModeOn);
@@ -398,13 +408,17 @@ public:
             drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, 0), game.characterScalingFactor, true);
             
             // 4. Draw moving planets
-			pEarth.rotationAngle += 0.1f;
-			drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 0.5f);
-			drawPlanet(defaultShader, earth, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 0.75f, pEarth.position, 5.f);
-			std::cout << pMars.position << std::endl;
-			drawPlanet(defaultShader, earth, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 0.5f, pMars.position, 1.f);
+			//pEarth.rotationAngle += 0.1f;
+			//drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 0.5f);
+			//drawPlanet(defaultShader, earth, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 0.75f, pEarth.position, 5.f);
+			
+		//	drawPlanet(defaultShader, earth, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 0.5f, pMars.position, 1.f);
 
             // 5. Draw arcs
+            for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
+                Obstacle obs = *it;
+                drawModel(defaultShader, obs.model, obs.position, obs.rotation, obs.scaling);
+            }
             
             
             // 6. Draw OTHER stuff
@@ -454,14 +468,25 @@ public:
         
     }
     
-    // Method for updating the game state after each interaction
+    // Method for updating the game state after each frame
     void updateGameState(){
+        
+        // Light updates
+        
+        light.position = Vector3f(3.f, 40.f, 8.f);
+        light.viewMatrix = lookAtMatrix(light.position, game.characterPosition, Vector3f(0.f, 1.f, 0.f));
+        light.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
         
         light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
         light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
         light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
         
-        //light.position = (game.characterPosition.x, 100, game.characterPosition.z);
+        if (game.turboModeOn){
+            movementSpeed = 0.5f;
+        } else {
+            movementSpeed = 0.05f;
+        }
+        
         
         if(false){ // distance between player and center of the map            
             //map.model = makeMap(map.center, 100, 1.f, 1.f);
@@ -495,7 +520,10 @@ public:
 			game.characterPosition += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
 			// cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
 
-		}
+        }if (mKeyPressed[GLFW_KEY_T]) {
+            game.turboModeOn = !game.turboModeOn;
+            // cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+        }
 		//std::cout << "Camera pos x: " << cameraPos.x << cameraPos.y << cameraPos.z << std::endl;
 
 	}
@@ -589,15 +617,28 @@ private:
     // Computed in a square from 0 to 1
     // Use world coordinates to compare it to objects
     struct Map {
-        int resolution;
+        int resolution = 100;
+        float perlinSize = 2.f;
         Vector3f center;
         Model model;
+        float heightMult = 5.f;
+        float scale = 200.f;
     } map;
 
 	struct Planet {
 		Vector3f position;
 		float rotationAngle;
 	};
+    
+    struct Obstacle {
+        Vector3f position;
+        float scaling;
+        Vector3f rotation;
+        Model model;
+    };
+    
+    std::vector<Obstacle> obstacles;
+    
     
     // Light
     struct Light {
@@ -607,6 +648,7 @@ private:
         Vector3f ambientColor;
         Vector3f diffuseColor;
         Vector3f specularColor;
+        float power;
     } light;
 
     // Shader for default rendering and for depth rendering
