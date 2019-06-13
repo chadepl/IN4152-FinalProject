@@ -347,7 +347,7 @@ public:
             skySphereShader.uniformMatrix4f("projMatrix", game.projMatrix);
             skySphereShader.uniformMatrix4f("viewMatrix", game.characterViewMatrix);
 
-			if (true) { //TODO If not all arcs are crossed
+			if (obstacles.size() != game.arcsCrossed) { //TODO If not all arcs are crossed
 				drawModel(skySphereShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale / 2, false);
 			}
 			else {
@@ -448,9 +448,9 @@ public:
             }
             
             // 4. Draw moving planets
-//            drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 4.f);
-//            drawPlanet(defaultShader, mars, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position, 25.f);
-//            drawPlanet(defaultShader, pinkplanet, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 1.5f, pMars.position, 12.f);
+            drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 4.f);
+            drawPlanet(defaultShader, mars, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position, 25.f);
+            drawPlanet(defaultShader, pinkplanet, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 1.5f, pMars.position, 12.f);
 
 
             // 5. Draw arcs
@@ -542,6 +542,7 @@ public:
         game.hangarScalingFactor = 1.f;
         game.turboModeOn = false;
         game.gameStart = false;
+		game.arcsCrossed = 0;
         
         if(!obstacles.empty()){
             for (auto &obs : obstacles){
@@ -599,7 +600,10 @@ public:
         for (auto &obs : obstacles){
             Vector3f distanceVector = (obs.position - game.characterPosition);
             float distance = std::abs(distanceVector.length());
-            if(distance < 1) obs.crossed = true;
+			if (distance < 1) {
+				obs.crossed = true;
+				game.arcsCrossed += 1;
+			}
         }
         
         
@@ -609,7 +613,7 @@ public:
 			cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f, 0))  *2.f;
 		}
 		else {
-			cameraPos = game.characterPosition + -cameraTarget * .2f;
+			cameraPos = game.characterPosition + -cameraTarget * 1.f;
 		}
 		game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
 		game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2] / m_viewport[3], 0.1, 100);
@@ -791,6 +795,8 @@ private:
         
         bool turboModeOn;
 		bool gameStart;
+
+		int arcsCrossed = 0;
     } game;
     
     // Computed in a square from 0 to 1
