@@ -530,8 +530,11 @@ public:
     void initGameState(){
         game.characterPosition = Vector3f(0.f, 2.f, 0.f); //3.5f, 2.f, -3.f
         cameraPos = game.characterPosition + -cameraTarget * .2f;
-        std::cout << game.characterPosition << std::endl;
-        std::cout << cameraPos << std::endl;
+		pitch = 0.f;
+		yaw = 0.f;
+		cameraTarget = Vector3f(cos(degToRad(pitch)) * cos(degToRad(yaw)), sin(degToRad(pitch)), cos(degToRad(pitch)) * sin(degToRad(yaw)));
+		cameraTarget.normalize();
+
         game.characterScalingFactor = .1f;
         game.characterRoll = 0.f;
         game.characterRollSensitivity = 0.5f;
