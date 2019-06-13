@@ -202,6 +202,11 @@ public:
         
         skybox = loadModel("Resources/skysphereblue.obj");
         skybox_texture = loadImage("Resources/" + skybox.materials[0].diffuse_texname);
+		skyboxBH = loadModel("Resources/skysphereblueBH.obj");
+		skybox_BH_texture = loadImage("Resources/" + skyboxBH.materials[0].diffuse_texname);
+
+		starSkybox = loadModel("Resources/skybox.obj");
+		starsky_texture = loadImage("Resources/" + starSkybox.materials[0].diffuse_texname);
 
         earth = loadModelWithMaterials("Resources/gijsEarth.obj", "Resources/");
         earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
@@ -225,6 +230,9 @@ public:
 		textureHandles.insert(std::pair<std::string, int>(mars.materials[0].diffuse_texname, mars_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(pinkplanet.materials[0].diffuse_texname, pink_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(skybox.materials[0].diffuse_texname, skybox_texture.handle));
+		textureHandles.insert(std::pair<std::string, int>(skyboxBH.materials[0].diffuse_texname, skybox_BH_texture.handle));
+
+		textureHandles.insert(std::pair<std::string, int>(starSkybox.materials[0].diffuse_texname, starsky_texture.handle));
 
         // testing models
         testingQuad = makeQuad();
@@ -339,7 +347,13 @@ public:
             skySphereShader.uniformMatrix4f("projMatrix", game.projMatrix);
             skySphereShader.uniformMatrix4f("viewMatrix", game.characterViewMatrix);
 
-            drawModel(skySphereShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale/2,false);
+			if (true) { //TODO If not all arcs are crossed
+				drawModel(skySphereShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale / 2, false);
+			}
+			else {
+				drawModel(skySphereShader, skyboxBH, Vector3f(0.f), Vector3f(0.f), map.scale / 2, false);
+				drawModel(skySphereShader, starSkybox, Vector3f(-95.f, 60.f, 140.f), Vector3f(0.f), 75.f, false);
+			}
 
             
             // TESTING
@@ -562,23 +576,23 @@ public:
         float currentGroundHeight = getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
         
         // check collisions with ceiling and floor
-        if(game.characterPosition.length() > map.scale/2 || game.characterPosition.y <= currentGroundHeight){
-            
-            if(!explosion.on){
-                explosion.on = true;
-                game.characterIsNotExploded = false;
-                explosion.startTime = clock();
-            } else {
-                clock_t elapsed = clock();
-                double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
-                //std::cout << "Elapsed: " << elapsed_secs << std::endl;
-				if (elapsed_secs > 10) {
-					mKeyPressed.clear();
-					initGameState();
-				}
-            }
-            
-        }
+    //    if(game.characterPosition.length() > map.scale/2 || game.characterPosition.y <= currentGroundHeight){
+    //        
+    //        if(!explosion.on){
+    //            explosion.on = true;
+    //            game.characterIsNotExploded = false;
+    //            explosion.startTime = clock();
+    //        } else {
+    //            clock_t elapsed = clock();
+    //            double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
+    //            //std::cout << "Elapsed: " << elapsed_secs << std::endl;
+				//if (elapsed_secs > 10) {
+				//	mKeyPressed.clear();
+				//	initGameState();
+				//}
+    //        }
+    //        
+    //    }
         
         // check if has crosed and arc
         
@@ -611,7 +625,6 @@ public:
         light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
         light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
         
-        // TODO: fix, buggy
         if (game.turboModeOn){
             movementSpeed = 0.5f;
         } else {
@@ -642,6 +655,7 @@ public:
                 // Move forward using unit direction vector
                 //cameraPos += cameraTarget.normalize() * movementSpeed;
                 game.characterPosition += cameraTarget.normalize() * movementSpeed;
+				std::cout << game.characterPosition << std::endl;
                 //std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
             }
             if (mKeyPressed[GLFW_KEY_S]) {
@@ -664,9 +678,13 @@ public:
                 game.characterRoll /= 1.25f;
             }
             if (mKeyPressed[GLFW_KEY_T]) {
-                game.turboModeOn = !game.turboModeOn;
+                game.turboModeOn = true;
                 // cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
             }
+			if (mKeyPressed[GLFW_KEY_N]) {
+				game.turboModeOn = false;
+				// cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+			}
 			if (mKeyPressed[GLFW_KEY_1]) {
 				game.cameraFirstPerson = true;
 			}
@@ -848,7 +866,7 @@ private:
 	float mouseSensitivity = 0.1f;
 	bool mouseCaptured = false;
 	float last_x, last_y;
-	float pitch, yaw = 0.f;
+	float pitch, yaw = 45.f;
     
     // Terrain
     
@@ -861,6 +879,8 @@ private:
 	Model hangar;
 	Model spacecraft;
 	Model skybox;
+	Model skyboxBH;
+	Model starSkybox;
 
 	Planet pEarth;
 	Planet pMars;
@@ -871,6 +891,8 @@ private:
 	Image pink_texture;
 	Image hangar_roof;
 	Image skybox_texture;
+	Image skybox_BH_texture;
+	Image starsky_texture;
     
     GLint m_viewport[4];
     
