@@ -503,7 +503,7 @@ public:
     
     void initGameState(){
         game.characterPosition = Vector3f(0.f, 2.f, 0.f); //3.5f, 2.f, -3.f
-        cameraPos = game.characterPosition + -cameraTarget * 2.f;
+        cameraPos = game.characterPosition + -cameraTarget * .2f;
         std::cout << game.characterPosition << std::endl;
         std::cout << cameraPos << std::endl;
         game.characterScalingFactor = .1f;
@@ -563,7 +563,10 @@ public:
                 clock_t elapsed = clock();
                 double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
                 //std::cout << "Elapsed: " << elapsed_secs << std::endl;
-                if(elapsed_secs > 10) initGameState();
+				if (elapsed_secs > 10) {
+					mKeyPressed.clear();
+					initGameState();
+				}
             }
             
         }
@@ -579,12 +582,15 @@ public:
         
         
         // Matrices updates
-        
-            cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f,0))  *2.f;
-            game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
-            game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
-        
-        
+		if (!game.cameraFirstPerson) {
+			cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f, 0))  *2.f;
+		}
+		else {
+			cameraPos = game.characterPosition + -cameraTarget * .2f;
+		}
+		game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
+		game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2] / m_viewport[3], 0.1, 100);
+
         
         // Light updates
         
@@ -652,6 +658,12 @@ public:
                 game.turboModeOn = !game.turboModeOn;
                 // cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
             }
+			if (mKeyPressed[GLFW_KEY_1]) {
+				game.cameraFirstPerson = true;
+			}
+			if (mKeyPressed[GLFW_KEY_3]) {
+				game.cameraFirstPerson = false;
+			}
             //std::cout << "Camera pos x: " << cameraPos.x << cameraPos.y << cameraPos.z << std::endl;
         }
 
@@ -737,6 +749,7 @@ private:
     struct Game {
         
         bool characterTurboModeOn;
+		bool cameraFirstPerson = true;
         
         Vector3f characterPosition;
         float characterScalingFactor;
