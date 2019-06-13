@@ -306,17 +306,20 @@ Vector3f getColor(float e, bool isWater){
     }
 }
 
-//void updateMapValues(Model& model){
-//    std::vector<Vector3f> updatedVertices;
-//    for (std::vector<Vector3f>::iterator it = model.vertices.begin() ; it != model.vertices.end(); ++it){
-//        Vector3f vertex = *it;
-//        vertex.y = vertex.y + 0.5;
-//        updatedVertices.push_back(vertex);
-//    }
-//    
-//    glBindVertexArray(model.vao);
-//    BufferSubData( enum target, intptr offset, sizeiptr size, const void *data );
-//}
+void updateMapValues(Model& model){
+    std::vector<Vector3f> updatedVertices;
+    for (std::vector<Vector3f>::iterator it = model.vertices.begin() ; it != model.vertices.end(); ++it){
+        Vector3f vertex = *it;
+        vertex.y = vertex.y + 0.005;
+        updatedVertices.push_back(vertex);
+    }
+    model.vertices = updatedVertices;
+    
+    glBindVertexArray(model.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, model.vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, model.vertices.size() * sizeof(Vector3f), model.vertices.data());
+    
+}
 
 
 // Makes map
@@ -427,16 +430,14 @@ Model makeTerrain(noise::module::Perlin perlinGenerator, float perlinSize, int r
     glGenVertexArrays(1, &model.vao);
     glBindVertexArray(model.vao);
     
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glGenBuffers(1, &model.vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, model.vbo);
     glBufferData(GL_ARRAY_BUFFER, model.vertices.size() * sizeof(Vector3f), model.vertices.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
     
-    GLuint nbo;
-    glGenBuffers(1, &nbo);
-    glBindBuffer(GL_ARRAY_BUFFER, nbo);
+    glGenBuffers(1, &model.nbo);
+    glBindBuffer(GL_ARRAY_BUFFER, model.nbo);
     glBufferData(GL_ARRAY_BUFFER, model.normals.size() * sizeof(Vector3f), model.normals.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);

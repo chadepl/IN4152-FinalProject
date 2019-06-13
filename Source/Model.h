@@ -24,6 +24,8 @@ public:
     std::vector<Vector3f> ambientColors;
     std::vector<Vector3f> specularColors;
     std::vector<float> shininessValues;
+    GLuint vbo;
+    GLuint nbo;
     
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
@@ -34,6 +36,7 @@ public:
 Model loadModel(std::string path);
 Model loadModelWithMaterials(std::string path, std::string matBaseDir);
 Model makeTerrain(noise::module::Perlin perlinGenerator, float perlinSize, int resolution, float heightMult, float scale, bool isWater);
+void updateMapValues(Model& model);
 float getHeightMapPoint(Vector3f point, noise::module::Perlin perlinGenerator, float perlinSize, float scale, float heightMult);
 Model loadCube();
 Model makeQuad();

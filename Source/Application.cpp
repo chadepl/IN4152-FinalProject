@@ -44,6 +44,7 @@ Matrix4f projectionProjectiveMatrix(float fov, float aspect, float nnear, float 
     projectionMatrix[10] = -(ffar + nnear) / (ffar - nnear);
     projectionMatrix[11] = -1;
     projectionMatrix[14] = -2 * ffar * nnear / (ffar - nnear);
+    projectionMatrix[15] = 0;
     
     return projectionMatrix;
 }
@@ -283,12 +284,15 @@ public:
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
         
         // Set behaviour for when texture coordinates are outside the [0, 1] range
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
         
         // Set interpolation for texture sampling (GL_NEAREST for no interpolation)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // TODO: NEAREST
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        
+        float color[] = {1.f, 1.f, 1.f, 1.f};
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
         
         //// Create framebuffer for extra texture
         glGenFramebuffers(1, &framebuffer);
@@ -318,7 +322,7 @@ public:
             drawScene(true);
             
             
-            glClearColor(0.f, 0.f, 0.f, 1.f);
+            glClearColor(0.f, 1.f, 0.f, 1.f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             
             // NORMAL SCENE
@@ -413,6 +417,7 @@ public:
             defaultShader.uniform1i("forTesting", false); // REMOVE at the end
             drawModel(defaultShader, map.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
+            updateMapValues(ocean.model);
             defaultShader.uniform1i("forTesting", false); // REMOVE at the end
             drawModel(defaultShader, ocean.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
