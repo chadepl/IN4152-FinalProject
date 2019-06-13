@@ -1,6 +1,6 @@
 #version 330
 
-uniform int forTesting;
+uniform bool forTesting;
 
 uniform mat4 projMatrix;
 uniform mat4 viewMatrix;
@@ -35,7 +35,7 @@ void main()
     passNormal = (modelMatrix * vec4(normal, 0)).xyz;
     passTexCoord = texCoord;
     
-    if(forTesting == 0) { // delete when finished
+    if(!forTesting) { // delete when finished
         material.diffuseColor = diffuseColor;
         material.ambientColor = ambientColor;
         material.specularColor = specularColor;

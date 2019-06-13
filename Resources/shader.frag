@@ -3,7 +3,7 @@
 uniform sampler2D colorMap;
 uniform sampler2D shadowMap;
 
-uniform int forTesting;
+uniform bool forTesting;
 uniform bool hasTexCoords;
 uniform bool turboModeOn;
 
@@ -133,6 +133,7 @@ void main()
         finalColor = getShading(light, lightDir, normal, material.diffuseColor);
     }
 
-    fragColor = vec4(finalColor * (1-percentageShadow), 1.0);
+    if(forTesting) fragColor = vec4(1.f, 0.f, 0.f, 1.0);
+    else fragColor = vec4(finalColor * (1-percentageShadow), 1.0);
     
 }

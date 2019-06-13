@@ -20,6 +20,7 @@
 #include <map>
 #include <string>
 #include <ctime>
+#include <cmath>
 
 #include <noise/noise.h> // used for the Perlin noise generation
 
@@ -194,25 +195,6 @@ public:
         for (int i = explosion.firstFrame; i < explosion.numFrames + 1; ++i) {
             explosion.frames.push_back(loadModelWithMaterials("Resources/spacecraftExplosion/spacecraftExplosion_00000"+ std::to_string(i)+".obj", "Resources/spacecraftExplosion/"));
             
-            //std::cout << "Loading obstacle: " << i << std::endl;
-            //std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
-        }
-        
-        // Obstacles ... this is an example, they should be added procedurally
-        //arcTest = loadModelWithMaterials("Resources/obstacleArc.obj");
-        
-        for (int i = 0; i < 30; ++i) {
-            Obstacle newObstacle;
-         
-            float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
-            float randomPositionZ = rand()%(int)round(map.scale) - (int)round(map.scale/2);
-            float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
-            
-            newObstacle.position = Vector3f(randomPositionX, height + 10, randomPositionZ);
-            newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj", "Resources/");
-            newObstacle.scaling = 1.f;
-            newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
-            obstacles.push_back(newObstacle);
             //std::cout << "Loading obstacle: " << i << std::endl;
             //std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
         }
@@ -428,19 +410,19 @@ public:
         
         if(!forComputingShadows){
             // 1. Draw map
-            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
             drawModel(defaultShader, map.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
-            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
             drawModel(defaultShader, ocean.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
             
             
             // 2. Draw hangar
-            defaultShader.uniform1i("forTesting", 0);
+            defaultShader.uniform1i("forTesting", false);
             drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
             
             // 3. Draw spacecraft
-            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
 			
             drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
             
@@ -453,6 +435,8 @@ public:
             // 5. Draw arcs
             for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
                 Obstacle obs = *it;
+                if(obs.crossed) defaultShader.uniform1i("forTesting", true); // REMOVE at the end
+                else defaultShader.uniform1i("forTesting", false); // REMOVE at the end
                 drawModel(defaultShader, obs.model, obs.position, obs.rotation, obs.scaling);
             }
             
@@ -469,13 +453,13 @@ public:
             }
             
 
-            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
             //drawModel(defaultShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
             
-            defaultShader.uniform1i("forTesting", 1); // REMOVE at the end
+            defaultShader.uniform1i("forTesting", true); // REMOVE at the end
             //drawModel(defaultShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
             
-            defaultShader.uniform1i("forTesting", 1); // REMOVE at the end
+            defaultShader.uniform1i("forTesting", true); // REMOVE at the end
             drawModel(defaultShader, lightCube, light.position);
             
             //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
@@ -535,6 +519,28 @@ public:
         game.hangarScalingFactor = 1.f;
         game.turboModeOn = false;
         game.gameStart = false;
+        
+        if(!obstacles.empty()){
+            for (auto &obs : obstacles){
+                obs.crossed = false;
+            }
+        }else{
+            for (int i = 0; i < 10; ++i) {
+                Obstacle newObstacle;
+                
+                float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
+                float randomPositionZ = rand()%(int)round(map.scale) - (int)round(map.scale/2);
+                float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
+                
+                newObstacle.position = Vector3f(randomPositionX, height + 10, randomPositionZ);
+                newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj", "Resources/");
+                newObstacle.scaling = 1.f;
+                newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
+                obstacles.push_back(newObstacle);
+                //std::cout << "Loading obstacle: " << i << std::endl;
+                //std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
+            }
+        }
     }
     
     
@@ -546,6 +552,7 @@ public:
         
         float currentGroundHeight = getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
         
+        // check collisions with ceiling and floor
         if(game.characterPosition.length() > map.scale/2 || game.characterPosition.y <= currentGroundHeight){
             
             if(!explosion.on){
@@ -561,7 +568,15 @@ public:
             
         }
         
-        //std::cout << currentGroundHeight  << std::endl;
+        // check if has crosed and arc
+        
+        for (auto &obs : obstacles){
+            Vector3f distanceVector = (obs.position - game.characterPosition);
+            float distance = std::abs(distanceVector.length());
+            if(distance < 1) obs.crossed = true;
+        }
+        
+        
         
         // Matrices updates
         
@@ -763,7 +778,7 @@ private:
         float scaling;
         Vector3f rotation;
         Model model;
-        bool notCrossed = true;
+        bool crossed = false;
     };
     
     std::vector<Obstacle> obstacles;
