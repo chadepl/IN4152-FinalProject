@@ -137,13 +137,13 @@ Model loadModelWithMaterials(std::string path, std::string matBaseDir)
     glBufferData(GL_ARRAY_BUFFER, model.specularColors.size() * sizeof(Vector3f), model.specularColors.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(4);
-    /*GLuint shininess_bo;
+    GLuint shininess_bo;
     glGenBuffers(1, &shininess_bo);
     glBindBuffer(GL_ARRAY_BUFFER, shininess_bo);
     glBufferData(GL_ARRAY_BUFFER, model.shininessValues.size() * sizeof(Vector3f), model.shininessValues.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(5);
-    */
+    
     
     if (model.texCoords.size() > 0)
     {
@@ -310,7 +310,7 @@ void updateMapValues(Model& model){
     std::vector<Vector3f> updatedVertices;
     for (std::vector<Vector3f>::iterator it = model.vertices.begin() ; it != model.vertices.end(); ++it){
         Vector3f vertex = *it;
-        vertex.y = vertex.y + 0.005;
+        vertex.y = vertex.y ;//+ 0.005;
         updatedVertices.push_back(vertex);
     }
     model.vertices = updatedVertices;
@@ -460,12 +460,12 @@ Model makeTerrain(noise::module::Perlin perlinGenerator, float perlinSize, int r
     glBufferData(GL_ARRAY_BUFFER, model.specularColors.size() * sizeof(Vector3f), model.specularColors.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(4);
-    //GLuint shininess_bo;
-    //glGenBuffers(1, &shininess_bo);
-    //glBindBuffer(GL_ARRAY_BUFFER, shininess_bo);
-    //glBufferData(GL_ARRAY_BUFFER, model.shininessValues.size() * sizeof(Vector3f), model.shininessValues.data(), GL_DYNAMIC_DRAW);
-    //glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, 0);
-    //glEnableVertexAttribArray(5);
+    GLuint shininess_bo;
+    glGenBuffers(1, &shininess_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, shininess_bo);
+    glBufferData(GL_ARRAY_BUFFER, model.shininessValues.size() * sizeof(Vector3f), model.shininessValues.data(), GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(5);
     
     
     if (model.texCoords.size() > 0)

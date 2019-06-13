@@ -347,6 +347,9 @@ public:
             skySphereShader.uniformMatrix4f("projMatrix", game.projMatrix);
             skySphereShader.uniformMatrix4f("viewMatrix", game.characterViewMatrix);
 
+            std::cout << game.arcsCrossed << std::endl;
+            
+            //std::cout << (obstacles.size() != game.arcsCrossed) << std::endl;
 			if (obstacles.size() != game.arcsCrossed) { //TODO If not all arcs are crossed
 				drawModel(skySphereShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale / 2, false);
 			}
@@ -549,7 +552,7 @@ public:
                 obs.crossed = false;
             }
         }else{
-            for (int i = 0; i < 10; ++i) {
+            for (int i = 0; i < 1; ++i) {
                 Obstacle newObstacle;
                 
                 float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
@@ -596,14 +599,14 @@ public:
     //    }
         
         // check if has crosed and arc
-        
+        game.arcsCrossed = 0;
         for (auto &obs : obstacles){
             Vector3f distanceVector = (obs.position - game.characterPosition);
             float distance = std::abs(distanceVector.length());
 			if (distance < 1) {
 				obs.crossed = true;
-				game.arcsCrossed += 1;
 			}
+            if(obs.crossed) game.arcsCrossed += 1;
         }
         
         
@@ -616,7 +619,7 @@ public:
 			cameraPos = game.characterPosition + -cameraTarget * 1.f;
 		}
 		game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
-		game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2] / m_viewport[3], 0.1, 100);
+		game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2] / m_viewport[3], 0.1, map.scale);
 
         
         // Light updates
