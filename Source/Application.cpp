@@ -199,7 +199,15 @@ public:
         ocean.model = makeTerrain(ocean.perlinGenerator, ocean.perlinSize, ocean.resolution, ocean.heightMult, ocean.scale, true);
         
 		
-        spacecraft = loadModelWithMaterials("Resources/spacecraft.obj");
+        spacecraft = loadModelWithMaterials("Resources/spacecraft.obj", "Resources/");
+        
+        explosion.numFrames = 9;
+        for (int i = explosion.firstFrame; i < explosion.numFrames + 1; ++i) {
+            explosion.frames.push_back(loadModelWithMaterials("Resources/spacecraftExplosion/spacecraftExplosion_00000"+ std::to_string(i)+".obj", "Resources/spacecraftExplosion/"));
+            
+            //std::cout << "Loading obstacle: " << i << std::endl;
+            //std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
+        }
         
         // Obstacles ... this is an example, they should be added procedurally
         //arcTest = loadModelWithMaterials("Resources/obstacleArc.obj");
@@ -212,7 +220,7 @@ public:
             float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.scale, map.heightMult);
             
             newObstacle.position = Vector3f(randomPositionX, height + 10, randomPositionZ);
-            newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj");
+            newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj", "Resources/");
             newObstacle.scaling = 1.f;
             newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
             obstacles.push_back(newObstacle);
@@ -223,11 +231,11 @@ public:
         skybox = loadModel("Resources/skysphereblue.obj");
         skybox_texture = loadImage("Resources/" + skybox.materials[0].diffuse_texname);
 
-        earth = loadModelWithMaterials("Resources/gijsEarth.obj");
+        earth = loadModelWithMaterials("Resources/gijsEarth.obj", "Resources/");
         earth_texture = loadImage("Resources/"+earth.materials[0].diffuse_texname);
-		mars = loadModelWithMaterials("Resources/mars.obj");
+		mars = loadModelWithMaterials("Resources/mars.obj", "Resources/");
 		mars_texture = loadImage("Resources/" + mars.materials[0].diffuse_texname);
-		pinkplanet = loadModelWithMaterials("Resources/pink.obj");
+		pinkplanet = loadModelWithMaterials("Resources/pink.obj", "Resources/");
 		pink_texture = loadImage("Resources/" + pinkplanet.materials[0].diffuse_texname);
 
 		pEarth.position = Vector3f(0.f, 30.f, 0.f);
@@ -237,7 +245,7 @@ public:
 		pTest.position = Vector3f(10.f, 30.f, 12.f);
 		pTest.rotationAngle = 0.f;
 
-        hangar = loadModelWithMaterials("Resources/Hangar2.obj");
+        hangar = loadModelWithMaterials("Resources/Hangar2.obj", "Resources/");
         hangar_roof = loadImage("Resources/" + hangar.materials[0].diffuse_texname);
 
 		textureHandles.insert(std::pair<std::string, int>(earth.materials[0].diffuse_texname, earth_texture.handle));
@@ -335,15 +343,23 @@ public:
             
             updateGameState();
             
+            // SHADOWS
+            drawScene(true);
+            
+            
             glClearColor(0.f, 0.f, 0.f, 1.f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             
-            drawScene(true);
-            
+            // NORMAL SCENE
             drawScene(false);
             
+            // SKY SPHERES
             skySphereShader.bind();
-            glViewport(0, 0, WIDTH * 2, HEIGHT *2);
+            #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+            glViewport(0, 0, WIDTH, HEIGHT);
+            #else
+            glViewport(0, 0, WIDTH * 2, HEIGHT * 2);
+            #endif
             
             skySphereShader.uniformMatrix4f("projMatrix", game.projMatrix);
             skySphereShader.uniformMatrix4f("viewMatrix", game.characterViewMatrix);
@@ -380,11 +396,7 @@ public:
 			#else
 			glViewport(0, 0, WIDTH * 2, HEIGHT * 2);
 			#endif
-           
-            
-            // Clear the screen
-            //glClearColor(0.94f, 1.f, 1.f, 1.f);
-            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
             
             // Bind the shadow map to texture slot 0            
             glActiveTexture(GL_TEXTURE1);
@@ -463,7 +475,10 @@ public:
             
             // 7. Draw OTHER stuff
                 //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
-
+            if(explosion.on){
+                drawModel(defaultShader, explosion.frames.front(), game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
+            }
+            
 
             defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
             //drawModel(defaultShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
@@ -513,20 +528,29 @@ public:
         
     }
     
+    
+    
     // Method for updating the game state after each frame
     void updateGameState(){
 		// Move character forward if user has pressed any key
-		if(game.gameStart)
+		if(game.gameStart && game.characterIsNotExploded)
 			game.characterPosition += cameraTarget.normalize() * movementSpeed;
         
-        if(game.characterPosition.length() > 5){
+        if(game.characterPosition.length() > map.scale/2 || game.characterPosition.y <= 0){
             std::cout << "Explode" << std::endl;
+            explosion.on = true;
+            game.characterIsNotExploded = false;
         }
         
+        std::cout << getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.scale, map.heightMult) << std::endl;
+        
         // Matrices updates
-        cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f,0))  *2.f;
-        game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
-        game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
+        
+            cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f,0))  *2.f;
+            game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
+            game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
+        
+        
         
         // Light updates
         
@@ -563,37 +587,40 @@ public:
 		}
 
 		game.gameStart = true;
-
-		if (mKeyPressed[GLFW_KEY_W]) {
-			// Move forward using unit direction vector
-			//cameraPos += cameraTarget.normalize() * movementSpeed;
-			game.characterPosition += cameraTarget.normalize() * movementSpeed;
-			//std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
-		}
-		if (mKeyPressed[GLFW_KEY_S]) {
-			// Move backward using unit direction vector
-			game.characterPosition -= cameraTarget.normalize() * movementSpeed;
-			// cameraPos -= cameraTarget.normalize() * movementSpeed;
-			//std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;		
-		}
-		if (mKeyPressed[GLFW_KEY_A]) {
-			// cameraPos -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
-			//game.characterPosition -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
-			game.characterRoll -= 1.f;
-		}
-		if (mKeyPressed[GLFW_KEY_D]) {
-			//game.characterPosition += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
-			// cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
-			game.characterRoll += 1.f;
-		}
-		if(!mKeyPressed[GLFW_KEY_A] && !mKeyPressed[GLFW_KEY_D]){
-			game.characterRoll /= 1.25f;
-		}
-		if (mKeyPressed[GLFW_KEY_T]) {
-            game.turboModeOn = !game.turboModeOn;
-            // cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+        
+        if(game.characterIsNotExploded){
+            if (mKeyPressed[GLFW_KEY_W]) {
+                // Move forward using unit direction vector
+                //cameraPos += cameraTarget.normalize() * movementSpeed;
+                game.characterPosition += cameraTarget.normalize() * movementSpeed;
+                //std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
+            }
+            if (mKeyPressed[GLFW_KEY_S]) {
+                // Move backward using unit direction vector
+                game.characterPosition -= cameraTarget.normalize() * movementSpeed;
+                // cameraPos -= cameraTarget.normalize() * movementSpeed;
+                //std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
+            }
+            if (mKeyPressed[GLFW_KEY_A]) {
+                // cameraPos -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+                //game.characterPosition -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+                game.characterRoll -= 1.f;
+            }
+            if (mKeyPressed[GLFW_KEY_D]) {
+                //game.characterPosition += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+                // cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+                game.characterRoll += 1.f;
+            }
+            if(!mKeyPressed[GLFW_KEY_A] && !mKeyPressed[GLFW_KEY_D]){
+                game.characterRoll /= 1.25f;
+            }
+            if (mKeyPressed[GLFW_KEY_T]) {
+                game.turboModeOn = !game.turboModeOn;
+                // cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
+            }
+            //std::cout << "Camera pos x: " << cameraPos.x << cameraPos.y << cameraPos.z << std::endl;
         }
-		//std::cout << "Camera pos x: " << cameraPos.x << cameraPos.y << cameraPos.z << std::endl;
+
 
 	}
 
@@ -683,6 +710,7 @@ private:
 		float characterRollSensitivity;
         Matrix4f characterViewMatrix;
         Matrix4f projMatrix;
+        bool characterIsNotExploded = true;
         
         Vector3f hangarPosition;
         float hangarScalingFactor;
@@ -720,6 +748,17 @@ private:
     };
     
     std::vector<Obstacle> obstacles;
+    
+    struct Animation{
+        bool on = false;
+        int firstFrame = 1;
+        int currentFrame = 1;
+        int numFrames = 10;
+        std::vector<Model> frames;
+    };
+    
+    Animation explosion;
+    
     
     
     // Light

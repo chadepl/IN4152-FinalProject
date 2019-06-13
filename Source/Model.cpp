@@ -15,7 +15,7 @@
 
 #include <noise/noise.h> // used for the Perlin noise generation
 
-Model loadModelWithMaterials(std::string path)
+Model loadModelWithMaterials(std::string path, std::string matBaseDir)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -31,7 +31,11 @@ Model loadModelWithMaterials(std::string path)
         exit(1);
     }
     
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "Resources/");
+    
+    //std::string fullpath = path + subpath;
+    std::cout << path << std::endl;
+    
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), matBaseDir.c_str());
     
     if (!err.empty()) {
         std::cerr << err << std::endl;
