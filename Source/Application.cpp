@@ -338,6 +338,8 @@ public:
             
             // SKY SPHERES
             skySphereShader.bind();
+            glfwGetFramebufferSize(window.windowPointer(), &framebufferWidth, &framebufferHeight);
+            std::cout << "FRAME BUFFER SIZE: " << framebufferWidth << std::endl;
             #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
             glViewport(0, 0, WIDTH, HEIGHT);
             #else
@@ -910,6 +912,7 @@ private:
 	Image starsky_texture;
     
     GLint m_viewport[4];
+    int framebufferWidth, framebufferHeight;
     
     // Testing models
     Model cube1;
@@ -925,6 +928,7 @@ private:
     const int SHADOWTEX_HEIGHT = 1024;
     GLuint texShadow;
     GLuint framebuffer;
+    
 };
 
 int main()
