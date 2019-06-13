@@ -451,9 +451,12 @@ public:
             }
             
             // 4. Draw moving planets
-            drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 4.f);
-            drawPlanet(defaultShader, mars, pMars.position, Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position, 25.f);
-            drawPlanet(defaultShader, pinkplanet, pTest.position, Vector3f(0, pTest.rotationAngle , 0), 1.5f, pMars.position, 12.f);
+            drawModel(defaultShader, earth, pEarth.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle, 0), 4.f);
+            drawPlanet(defaultShader, mars, pMars.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position + Vector3f(-95.f, 60.f, 140.f), 25.f);
+			float newX = 25.f * cos(degToRad(pEarth.rotationAngle)) + pEarth.position.x;
+			float newZ = 25.f * sin(degToRad(pEarth.rotationAngle)) + pEarth.position.z;
+			pMars.position = Vector3f(newX, 60.f, newZ);
+			drawPlanet(defaultShader, pinkplanet, pTest.position + Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pTest.rotationAngle * 10 , 0), 1.5f, pMars.position + Vector3f(-95.f, 60.f, 140.f), 12.f);
 
 
             // 5. Draw arcs
@@ -555,7 +558,7 @@ public:
                 obs.crossed = false;
             }
         }else{
-            for (int i = 0; i < 1; ++i) {
+            for (int i = 0; i < 10; ++i) {
                 Obstacle newObstacle;
                 
                 float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
