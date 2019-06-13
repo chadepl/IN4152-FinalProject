@@ -98,7 +98,6 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
         shader.uniform1i("colorMap", 0);
 	}
 
-	
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
     
@@ -217,11 +216,11 @@ public:
             newObstacle.scaling = 1.f;
             newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
             obstacles.push_back(newObstacle);
-            std::cout << "Loading obstacle: " << i << std::endl;
-            std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
+            //std::cout << "Loading obstacle: " << i << std::endl;
+            //std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
         }
         
-        skybox = loadModelWithMaterials("Resources/skysphereblue.obj");
+        skybox = loadModel("Resources/skysphereblue.obj");
         skybox_texture = loadImage("Resources/" + skybox.materials[0].diffuse_texname);
 
         earth = loadModelWithMaterials("Resources/gijsEarth.obj");
@@ -336,20 +335,21 @@ public:
             
             updateGameState();
             
-//            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-//            glClearColor(0.94f, 1.f, 1.f, 1.f);
-//            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//
-//            skySphereShader.bind();
-//            skySphereShader.uniformMatrix4f("projMatrix", projMatrix);
-//            skySphereShader.uniformMatrix4f("viewMatrix", viewMatrix);
-//
-//            drawModel(skySphereShader, skybox, Vector3f(0.f, 0.f, 0.f), Vector3f(0.f), map.scale, false);
-            
+            glClearColor(0.f, 0.f, 0.f, 1.f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             
             drawScene(true);
             
             drawScene(false);
+            
+            skySphereShader.bind();
+            glViewport(0, 0, WIDTH * 2, HEIGHT *2);
+            
+            skySphereShader.uniformMatrix4f("projMatrix", game.projMatrix);
+            skySphereShader.uniformMatrix4f("viewMatrix", game.characterViewMatrix);
+
+            drawModel(skySphereShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale/2,false);
+
             
             // TESTING
             
@@ -373,10 +373,6 @@ public:
     // Method for drawing all the elements of the game
     void drawScene(bool forComputingShadows) {
         
-		cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f,0))  *2.f;
-        Matrix4f viewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
-        Matrix4f projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
-        
         if(!forComputingShadows){
             defaultShader.bind();
 			#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
@@ -387,16 +383,16 @@ public:
            
             
             // Clear the screen
-            glClearColor(0.94f, 1.f, 1.f, 1.f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            //glClearColor(0.94f, 1.f, 1.f, 1.f);
+            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             
             // Bind the shadow map to texture slot 0            
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, texShadow);
             defaultShader.uniform1i("shadowMap", 1);
             
-            defaultShader.uniformMatrix4f("projMatrix", projMatrix);
-            defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+            defaultShader.uniformMatrix4f("projMatrix", game.projMatrix);
+            defaultShader.uniformMatrix4f("viewMatrix", game.characterViewMatrix);
             
             defaultShader.uniformMatrix4f("light.projectionMatrix", light.projectionMatrix);
             defaultShader.uniformMatrix4f("light.viewMatrix", light.viewMatrix);
@@ -461,8 +457,8 @@ public:
             
             // 6. Skyboxes
             
-            defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
-            drawModel(defaultShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale/2);
+            //defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
+            //drawModel(defaultShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale/2);
             
             
             // 7. Draw OTHER stuff
@@ -522,6 +518,15 @@ public:
 		// Move character forward if user has pressed any key
 		if(game.gameStart)
 			game.characterPosition += cameraTarget.normalize() * movementSpeed;
+        
+        if(game.characterPosition.length() > 5){
+            std::cout << "Explode" << std::endl;
+        }
+        
+        // Matrices updates
+        cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f,0))  *2.f;
+        game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
+        game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2]/m_viewport[3], 0.1, 100);
         
         // Light updates
         
@@ -676,6 +681,8 @@ private:
         float characterScalingFactor;
 		float characterRoll;
 		float characterRollSensitivity;
+        Matrix4f characterViewMatrix;
+        Matrix4f projMatrix;
         
         Vector3f hangarPosition;
         float hangarScalingFactor;
