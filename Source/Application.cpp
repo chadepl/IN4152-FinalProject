@@ -339,10 +339,11 @@ public:
             // SKY SPHERES
             skySphereShader.bind();
             glfwGetFramebufferSize(window.windowPointer(), &framebufferWidth, &framebufferHeight);
+            std::cout << "FRAME BUFFER SIZE: " << framebufferWidth << std::endl;
             #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
             glViewport(0, 0, WIDTH, HEIGHT);
             #else
-            glViewport(0, 0, framebufferWidth, framebufferHeight);
+            glViewport(0, 0, WIDTH * 2, HEIGHT * 2);
             #endif
             
             skySphereShader.uniformMatrix4f("projMatrix", game.projMatrix);
@@ -384,11 +385,10 @@ public:
         
         if(!forComputingShadows){
             defaultShader.bind();
-            glfwGetFramebufferSize(window.windowPointer(), &framebufferWidth, &framebufferHeight);
 			#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 			glViewport(0, 0, WIDTH, HEIGHT);
 			#else
-			glViewport(0, 0, framebufferWidth, framebufferHeight);
+			glViewport(0, 0, WIDTH * 2, HEIGHT * 2);
 			#endif
 
             
