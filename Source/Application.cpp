@@ -436,9 +436,11 @@ public:
             drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
             
             // 3. Draw spacecraft
-            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
-			
-            drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
+            if(!explosion.on){
+                defaultShader.uniform1i("forTesting", false); // REMOVE at the end
+                
+                drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
+            }
             
             // 4. Draw moving planets
 //            drawModel(defaultShader, earth, pEarth.position, Vector3f(0, pEarth.rotationAngle, 0), 4.f);
@@ -463,7 +465,9 @@ public:
             // 7. Draw OTHER stuff
                 //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
             if(explosion.on){
-                drawModel(defaultShader, explosion.frames.front(), game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
+                drawModel(defaultShader, explosion.frames[explosion.currentFrame], game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
+                if(explosion.currentFrame < explosion.numFrames)
+                    explosion.currentFrame++;
             }
             
 
@@ -816,6 +820,7 @@ private:
     
     struct Animation{
         clock_t startTime = clock();
+        float timePerFrame = 0.5; //seconds
         bool on = false;
         int firstFrame = 1;
         int currentFrame = 1;
