@@ -19,6 +19,7 @@
 #include <math.h>
 #include <map>
 #include <string>
+#include <ctime>
 
 #include <noise/noise.h> // used for the Perlin noise generation
 
@@ -173,19 +174,7 @@ public:
         
         // -- general game state
         
-        game.characterPosition = Vector3f(0.f, 2.f, 0.f); //3.5f, 2.f, -3.f
-		cameraPos = game.characterPosition + -cameraTarget * 2.f;
-		std::cout << game.characterPosition << std::endl;
-		std::cout << cameraPos << std::endl;
-        game.characterScalingFactor = .1f;
-		game.characterRoll = 0.f;
-		game.characterRollSensitivity = 0.5f;
-        game.characterTurboModeOn = false;
-        
-        game.hangarPosition = Vector3f(0.f, 1.f, 0.f);
-        game.hangarScalingFactor = 1.f;
-        game.turboModeOn = false;
-		game.gameStart = false;
+        initGameState();
         
         // -- loading models
         
@@ -217,7 +206,7 @@ public:
          
             float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
             float randomPositionZ = rand()%(int)round(map.scale) - (int)round(map.scale/2);
-            float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.scale, map.heightMult);
+            float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
             
             newObstacle.position = Vector3f(randomPositionX, height + 10, randomPositionZ);
             newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj", "Resources/");
@@ -528,6 +517,25 @@ public:
         
     }
     
+    void initGameState(){
+        game.characterPosition = Vector3f(0.f, 2.f, 0.f); //3.5f, 2.f, -3.f
+        cameraPos = game.characterPosition + -cameraTarget * 2.f;
+        std::cout << game.characterPosition << std::endl;
+        std::cout << cameraPos << std::endl;
+        game.characterScalingFactor = .1f;
+        game.characterRoll = 0.f;
+        game.characterRollSensitivity = 0.5f;
+        game.characterTurboModeOn = false;
+        game.characterIsNotExploded = true;
+        
+        explosion.currentFrame = 1;
+        explosion.on = false;
+        
+        game.hangarPosition = Vector3f(0.f, 1.f, 0.f);
+        game.hangarScalingFactor = 1.f;
+        game.turboModeOn = false;
+        game.gameStart = false;
+    }
     
     
     // Method for updating the game state after each frame
@@ -536,13 +544,24 @@ public:
 		if(game.gameStart && game.characterIsNotExploded)
 			game.characterPosition += cameraTarget.normalize() * movementSpeed;
         
-        if(game.characterPosition.length() > map.scale/2 || game.characterPosition.y <= 0){
-            std::cout << "Explode" << std::endl;
-            explosion.on = true;
-            game.characterIsNotExploded = false;
+        float currentGroundHeight = getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
+        
+        if(game.characterPosition.length() > map.scale/2 || game.characterPosition.y <= currentGroundHeight){
+            
+            if(!explosion.on){
+                explosion.on = true;
+                game.characterIsNotExploded = false;
+                explosion.startTime = clock();
+            } else {
+                clock_t elapsed = clock();
+                double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
+                //std::cout << "Elapsed: " << elapsed_secs << std::endl;
+                if(elapsed_secs > 10) initGameState();
+            }
+            
         }
         
-        std::cout << getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.scale, map.heightMult) << std::endl;
+        //std::cout << currentGroundHeight  << std::endl;
         
         // Matrices updates
         
@@ -750,6 +769,7 @@ private:
     std::vector<Obstacle> obstacles;
     
     struct Animation{
+        clock_t startTime = clock();
         bool on = false;
         int firstFrame = 1;
         int currentFrame = 1;

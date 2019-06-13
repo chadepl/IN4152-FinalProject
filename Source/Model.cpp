@@ -276,8 +276,10 @@ float getNoiseValue(noise::module::Perlin perlinGenerator, float posX, float pos
     return elevation;
 }
 
-float getHeightMapPoint(Vector3f point, noise::module::Perlin perlinGenerator, float scale, float heightMult){
-    float value = getNoiseValue(perlinGenerator, (point.x+(scale/2))/scale, (point.z+(scale/2))/scale, false);
+float getHeightMapPoint(Vector3f point, noise::module::Perlin perlinGenerator, float perlinSize, float scale, float heightMult){
+    float adjX = ((point.x + (scale/2))/scale)*perlinSize;
+    float adjZ = ((point.z + (scale/2))/scale)*perlinSize;
+    float value = getNoiseValue(perlinGenerator, adjX, adjZ, false);
     return heightMult * value;
 }
 

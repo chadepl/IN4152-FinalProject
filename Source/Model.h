@@ -34,7 +34,7 @@ public:
 Model loadModel(std::string path);
 Model loadModelWithMaterials(std::string path, std::string matBaseDir);
 Model makeTerrain(noise::module::Perlin perlinGenerator, float perlinSize, int resolution, float heightMult, float scale, bool isWater);
-float getHeightMapPoint(Vector3f point, noise::module::Perlin perlinGenerator, float scale, float heightMult);
+float getHeightMapPoint(Vector3f point, noise::module::Perlin perlinGenerator, float perlinSize, float scale, float heightMult);
 Model loadCube();
 Model makeQuad();
 Vector3f getColor(float height);
