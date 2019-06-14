@@ -231,23 +231,23 @@ public:
 
         try {
             defaultShader.create();
-            defaultShader.addShader(VERTEX, "Resources/shader.vert");
-            defaultShader.addShader(FRAGMENT, "Resources/shader.frag");
+            defaultShader.addShader(VERTEX, "Resources/shaders/shader.vert");
+            defaultShader.addShader(FRAGMENT, "Resources/shaders/shader.frag");
             defaultShader.build();
 
             shadowShader.create();
-            shadowShader.addShader(VERTEX, "Resources/shadow.vert");
-            shadowShader.addShader(FRAGMENT, "Resources/shadow.frag");
+            shadowShader.addShader(VERTEX, "Resources/shaders/shadow.vert");
+            shadowShader.addShader(FRAGMENT, "Resources/shaders/shadow.frag");
             shadowShader.build();
             
             skySphereShader.create();
-            skySphereShader.addShader(VERTEX, "Resources/shaderSkySphere.vert");
-            skySphereShader.addShader(FRAGMENT, "Resources/shaderSkySphere.frag");
+            skySphereShader.addShader(VERTEX, "Resources/shaders/shaderSkySphere.vert");
+            skySphereShader.addShader(FRAGMENT, "Resources/shaders/shaderSkySphere.frag");
             skySphereShader.build();
             
             testShader.create();
-            testShader.addShader(VERTEX, "Resources/test.vert");
-            testShader.addShader(FRAGMENT, "Resources/test.frag");
+            testShader.addShader(VERTEX, "Resources/shaders/test.vert");
+            testShader.addShader(FRAGMENT, "Resources/shaders/test.frag");
             testShader.build();
         }
         catch (ShaderLoadingException e)
