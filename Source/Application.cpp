@@ -108,7 +108,7 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
 // Just make sure you let the shader know whether the model has texture coordinates
-void drawPlanet(ShaderProgram& shader, const Model& model, Vector3f& position, Vector3f rotation = Vector3f(0), float scale = 1, Vector3f rotationPoint = Vector3f(0), float distance=1.f)
+void drawPlanet(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f rotation = Vector3f(0), float scale = 1, Vector3f rotationPoint = Vector3f(0), float distance=1.f)
 {
 	Matrix4f modelMatrix;
 	
@@ -318,7 +318,7 @@ public:
             // SHADOWS
             drawScene(true);
             
-            glClearColor(0.f, 1.f, 0.f, 1.f);
+            glClearColor(0.3f, 0.3f, 0.3f, 1.f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             
             // NORMAL SCENE
@@ -334,7 +334,7 @@ public:
             skySphereShader.uniformMatrix4f("viewMatrix", game.characterViewMatrix);
 
             //std::cout << (obstacles.size() != game.arcsCrossed) << std::endl;
-			if (obstacles.size() != game.arcsCrossed) { //TODO If not all arcs are crossed
+			if (!game.obstaclesSurpased) { //TODO If not all arcs are crossed
 				drawModel(skySphereShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale / 2, false);
 			}
 			else {
@@ -431,7 +431,6 @@ public:
             // 3. Draw spacecraft
             if(!explosion.on){
                 defaultShader.uniform1i("forTesting", false); // REMOVE at the end
-                
                 drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
             }
             
@@ -444,19 +443,21 @@ public:
             }
             
             // 5. Draw moving planets
+            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
             drawModel(defaultShader, earth, pEarth.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle, 0), 4.f);
-//            drawPlanet(defaultShader, mars, pMars.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position + Vector3f(-95.f, 60.f, 140.f), 25.f);
+            drawPlanet(defaultShader, mars, pMars.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position + Vector3f(-95.f, 60.f, 140.f), 25.f);
             
 			float newX = 25.f * cos(degToRad(pEarth.rotationAngle)) + pEarth.position.x;
 			float newZ = 25.f * sin(degToRad(pEarth.rotationAngle)) + pEarth.position.z;
 			pMars.position = Vector3f(newX, 60.f, newZ);
-//            drawPlanet(defaultShader, pinkplanet, pTest.position + Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pTest.rotationAngle * 10 , 0), 1.5f, pMars.position + Vector3f(-95.f, 60.f, 140.f), 12.f);
+            drawPlanet(defaultShader, pinkplanet, pTest.position + Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pTest.rotationAngle * 10 , 0), 1.5f, pMars.position + Vector3f(-95.f, 60.f, 140.f), 12.f);
             
             
             // 6. Draw OTHER stuff
                 //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
             if(explosion.on){
-                drawModel(defaultShader, explosion.frames[explosion.currentFrame], game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
+                defaultShader.uniform1i("forTesting", false); // REMOVE at the end
+                drawModel(defaultShader, explosion.frames[explosion.currentFrame - 1], game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
                 if(explosion.currentFrame < explosion.numFrames)
                     explosion.currentFrame++;
             }
@@ -512,6 +513,8 @@ public:
         game.characterTurboModeOn = false;
         game.characterIsNotExploded = true;
         
+        game.obstaclesSurpased = false;
+        
         explosion.currentFrame = 1;
         explosion.on = false;
         
@@ -526,14 +529,14 @@ public:
                 obs.crossed = false;
             }
         }else{
-            for (int i = 0; i < 0; ++i) {
+            for (int i = 0; i < game.numObstacles; ++i) {
                 Obstacle newObstacle;
                 
                 float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
                 float randomPositionZ = rand()%(int)round(map.scale) - (int)round(map.scale/2);
                 float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
                 
-                newObstacle.position = Vector3f(randomPositionX, height + 10, randomPositionZ);
+                newObstacle.position = Vector3f(randomPositionX, height + 15, randomPositionZ);
                 newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj", "Resources/");
                 newObstacle.scaling = 1.f;
                 newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
@@ -593,26 +596,29 @@ public:
 
 		}
         
+        // add iff
+        if(obstacles.size() == game.arcsCrossed) game.obstaclesSurpased = true;
+        
         float currentGroundHeight = getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
         
-//        if(game.characterPosition.length() > map.scale/2 || game.characterPosition.y <= currentGroundHeight){
-//
-//            if(!explosion.on){
-//                explosion.on = true;
-//                game.characterIsNotExploded = false;
-//                explosion.startTime = clock();
-//            } else {
-//                clock_t elapsed = clock();
-//                double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
-//                //std::cout << "Elapsed: " << elapsed_secs << std::endl;
-//                if (elapsed_secs > 10) {
-//                    mKeyPressed.clear();
-//                    initGameState();
-//                }
-//            }
-//
-//        }
-//
+        if((game.characterPosition.length() > map.scale/2 && !game.obstaclesSurpased) || (game.characterPosition.y <= currentGroundHeight)){
+
+            if(!explosion.on){
+                explosion.on = true;
+                game.characterIsNotExploded = false;
+                explosion.startTime = clock();
+            } else {
+                clock_t elapsed = clock();
+                double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
+                //std::cout << "Elapsed: " << elapsed_secs << std::endl;
+                if (elapsed_secs > game.restartTimeSecs) {
+                    mKeyPressed.clear();
+                    initGameState();
+                }
+            }
+
+        }
+
         
         // Matrices updates
 		if (!game.cameraFirstPerson) {
@@ -781,6 +787,10 @@ private:
         Matrix4f characterViewMatrix;
         Matrix4f projMatrix;
         bool characterIsNotExploded = true;
+        
+        bool obstaclesSurpased = false;
+        int numObstacles = 1;
+        int restartTimeSecs = 3;
         
         Vector3f hangarPosition;
         float hangarScalingFactor;

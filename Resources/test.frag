@@ -30,7 +30,7 @@ void main() {
     linearDepth = 2 * 0.1 * 100 / (100+0.1 - linearDepth * (100-0.1));
     float res =  linearDepth/10;
     
-    outColor = vec4(vec3(color), 1.0f);
+    outColor = vec4(vec3(linearDepth), 1.0f);
     
     //outColor = vec4(vec3(color), 1.0);
     
