@@ -206,7 +206,7 @@ public:
 		pinkplanet = loadModelWithMaterials("Resources/pink.obj", "Resources/");
 		pink_texture = loadImage("Resources/" + pinkplanet.materials[0].diffuse_texname);
 
-		sun = loadModel("Resources/sun.obj");
+		sun = loadModelWithMaterials("Resources/sun.obj", "Resources/");
 		sun_texture = loadImage("Resources/" + sun.materials[0].diffuse_texname);
 
 		pEarth.position = Vector3f(0.f, 30.f, 0.f);
@@ -420,34 +420,34 @@ public:
         
         if(!forComputingShadows){
             // 1. Draw map
-            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
+            defaultShader.uniform1i("tintOn", false); // REMOVE at the end
             drawModel(defaultShader, map.model, Vector3f(0.f), Vector3f(0.f), 1.f);
             
             updateMapValues(ocean.model);
-            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
+            defaultShader.uniform1i("tintOn", false); // REMOVE at the end
             drawModel(defaultShader, ocean.model, Vector3f(0.f), Vector3f(0.f), 1.f);
             
             
             // 2. Draw hangar
-            defaultShader.uniform1i("forTesting", false);
+            defaultShader.uniform1i("tintOn", false);
             drawModel(defaultShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);
             
             // 3. Draw spacecraft
             if(!explosion.on){
-                defaultShader.uniform1i("forTesting", false); // REMOVE at the end
+                defaultShader.uniform1i("tintOn", false); // REMOVE at the end
                 drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
             }
             
             // 4. Draw arcs
             for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
                 Obstacle obs = *it;
-                if(obs.crossed) defaultShader.uniform1i("forTesting", true); // REMOVE at the end
-                else defaultShader.uniform1i("forTesting", false); // REMOVE at the end
+                if(obs.crossed) defaultShader.uniform1i("tintOn", true); // REMOVE at the end
+                else defaultShader.uniform1i("tintOn", false); // REMOVE at the end
                 drawModel(defaultShader, obs.model, obs.position, obs.rotation, obs.scaling);
             }
             
             // 5. Draw moving planets
-            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
+            defaultShader.uniform1i("tintOn", false); // REMOVE at the end
             drawModel(defaultShader, earth, pEarth.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle, 0), 4.f);
             drawPlanet(defaultShader, mars, pMars.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position + Vector3f(-95.f, 60.f, 140.f), 25.f);
             
@@ -460,18 +460,17 @@ public:
             // 6. Draw OTHER stuff
                 //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
             if(explosion.on){
-                defaultShader.uniform1i("forTesting", false); // REMOVE at the end
+                defaultShader.uniform1i("tintOn", false); // REMOVE at the end
                 drawModel(defaultShader, explosion.frames[explosion.currentFrame - 1], game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
                 if(explosion.currentFrame < explosion.numFrames)
                     explosion.currentFrame++;
             }
             
 			// Draw Sun as light in solar system
-			if (game.obstaclesSurpased) {
-				drawModel(defaultShader, sun , light.position);
-			} else {
-				drawModel(defaultShader, lightCube, light.position);
-			}
+            defaultShader.uniform1i("isSun", true);
+            drawModel(defaultShader, sun , light.position, Vector3f(0.f), light.scale);
+            defaultShader.uniform1i("isSun", false);
+			
             
         }
         
@@ -540,11 +539,13 @@ public:
             for (int i = 0; i < game.numObstacles; ++i) {
                 Obstacle newObstacle;
                 
-                float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
-                float randomPositionZ = rand()%(int)round(map.scale) - (int)round(map.scale/2);
+                float randomPositionX = rand()%(int)round(map.scale/2) - (int)round(map.scale/4);
+                float randomPositionZ = rand()%(int)round(map.scale/2) - (int)round(map.scale/4);
                 float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
                 
-                newObstacle.position = Vector3f(randomPositionX, height + 15, randomPositionZ);
+                if(height <= 0) height = 10;
+                
+                newObstacle.position = Vector3f(randomPositionX, height + 10, randomPositionZ);
                 newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj", "Resources/");
                 newObstacle.scaling = 1.f;
                 newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
@@ -599,6 +600,7 @@ public:
 				light.position = starskySpherePos + Vector3f(0, 65.f, 0);
 				light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f, 2.f, 0.f), cameraUp);
 				light.projectionMatrix = projectionProjectiveMatrix(100, 1, 0.1, 100);
+                light.scale = 10.f;
 			}
 
 
@@ -797,7 +799,7 @@ private:
         bool characterIsNotExploded = true;
         
         bool obstaclesSurpased = false;
-        int numObstacles = 6;
+        int numObstacles = 1;
         int restartTimeSecs = 3;
         
         Vector3f hangarPosition;
@@ -861,6 +863,7 @@ private:
         Vector3f ambientColor;
         Vector3f diffuseColor;
         Vector3f specularColor;
+        float scale = 2.f;
     } light;
 
     // Shader for default rendering and for depth rendering

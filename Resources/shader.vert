@@ -1,6 +1,6 @@
 #version 330
 
-uniform bool forTesting;
+uniform bool tintOn;
 
 uniform mat4 projMatrix;
 uniform mat4 viewMatrix;
@@ -35,7 +35,7 @@ void main()
     passNormal = (modelMatrix * vec4(normal, 0)).xyz;
     passTexCoord = texCoord;
     
-    if(!forTesting) { // delete when finished
+    if(!tintOn) { 
         material.diffuseColor = diffuseColor;
         material.ambientColor = ambientColor;
         material.specularColor = specularColor;

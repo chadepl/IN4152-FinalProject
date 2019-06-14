@@ -3,7 +3,8 @@
 uniform sampler2D colorMap;
 uniform sampler2D shadowMap;
 
-uniform bool forTesting;
+uniform bool tintOn;
+uniform bool isSun;
 uniform bool hasTexCoords;
 uniform bool turboModeOn;
 
@@ -125,14 +126,19 @@ void main()
     vec3 texDiffuse, finalColor;
     
     if (hasTexCoords){
+        if(isSun) {
+            percentageShadow = 0;
+            normal = -normal;
+        }
         texDiffuse = texture(colorMap, passTexCoord).rgb;
-        finalColor = texDiffuse;//getShading(light, lightDir, normal, texDiffuse);
-        percentageShadow = 0;
+        finalColor = getShading(light, lightDir, normal, texDiffuse);
+        
     }else{
         finalColor = getShading(light, lightDir, normal, material.diffuseColor);
     }
 
-    if(forTesting) fragColor = vec4(1.f, 0.f, 0.f, 1.0);
-    else fragColor = vec4(finalColor * (1-percentageShadow), 1.0);
+    //if(tintOn) fragColor = vec4(1.f, 0.f, 0.f, 1.0);
+    //else
+    fragColor = vec4(finalColor * (1-percentageShadow), 1.0);
     
 }
