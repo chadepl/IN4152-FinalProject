@@ -32,9 +32,6 @@ Model loadModelWithMaterials(std::string path, std::string matBaseDir)
     }
     
     
-    //std::string fullpath = path + subpath;
-    std::cout << path << std::endl;
-    
     bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), matBaseDir.c_str());
     
     if (!err.empty()) {
@@ -60,14 +57,10 @@ Model loadModelWithMaterials(std::string path, std::string matBaseDir)
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
             int fv = shapes[s].mesh.num_face_vertices[f];
             
-            //if(materials.size() > 0) {
-                tinyobj::material_t mat = materials[shapes[s].mesh.material_ids[f]];
-                //std::cout << "Mesh - " << shapes[s].name << std::endl;
-                //std::cout << "Diffuse: (" << mat.diffuse[0] << ", " << mat.diffuse[1] << ", " << mat.diffuse[2] << ") " << std::endl;
-            //}
+            
+            tinyobj::material_t mat = materials[shapes[s].mesh.material_ids[f]];
+            
             // Materials to set
-            
-            
             
             // Loop over vertices in the face.
             for (size_t v = 0; v < fv; v++) {
@@ -218,10 +211,6 @@ Model loadModel(std::string path)
                     model.texCoords.push_back(Vector2f(tx, 1-ty));
                 }
                 
-                // Optional: vertex colors
-                // tinyobj::real_t red = attrib.colors[3*idx.vertex_index+0];
-                // tinyobj::real_t green = attrib.colors[3*idx.vertex_index+1];
-                // tinyobj::real_t blue = attrib.colors[3*idx.vertex_index+2];
             }
             index_offset += fv;
 
@@ -542,46 +531,6 @@ Model loadCube(){
     cube.normals.push_back(Vector3f(0.0f,  1.0f,  0.0f));
     cube.normals.push_back(Vector3f(0.0f,  1.0f,  0.0f));
     
-//    Vector3f p1 = Vector3f(-0.5, -0.5, 0.5);
-//    Vector3f p2 = Vector3f(0.5, -0.5, 0.5);
-//    Vector3f p3 = Vector3f(0.5, 0.5, 0.5);
-//    Vector3f p4 = Vector3f(-0.5, 0.5, 0.5);
-//    Vector3f p5 = Vector3f(-0.5, -0.5, -0.5);
-//    Vector3f p6 = Vector3f(0.5, -0.5, -0.5);
-//    Vector3f p7 = Vector3f(0.5, 0.5, -0.5);
-//    Vector3f p8 = Vector3f(-0.5, 0.5, -0.5);
-//    Vector3f U, V;
-    
-//    cube.vertices.push_back(p5); cube.vertices.push_back(p6); cube.vertices.push_back(p7);
-//    cube.vertices.push_back(p7); cube.vertices.push_back(p8); cube.vertices.push_back(p5);
-//    cube.normals.push_back(Vector3f(0.0, 0.0, -1.0));
-//    cube.normals.push_back(Vector3f(0.0, 0.0, -1.0));
-//
-//
-//    cube.vertices.push_back(p1); cube.vertices.push_back(p2); cube.vertices.push_back(p3);
-//    cube.vertices.push_back(p3); cube.vertices.push_back(p4); cube.vertices.push_back(p1);
-//    cube.normals.push_back(Vector3f(0.0, 0.0, 1.0));
-//    cube.normals.push_back(Vector3f(0.0, 0.0, 1.0));
-//
-//    cube.vertices.push_back(p4); cube.vertices.push_back(p8); cube.vertices.push_back(p5);
-//    cube.vertices.push_back(p5); cube.vertices.push_back(p1); cube.vertices.push_back(p4);
-//    cube.normals.push_back(Vector3f(-1.0, 0.0, 0.0));
-//    cube.normals.push_back(Vector3f(-1.0, 0.0, 0.0));
-//
-//    cube.vertices.push_back(p3); cube.vertices.push_back(p7); cube.vertices.push_back(p6);
-//    cube.vertices.push_back(p6); cube.vertices.push_back(p2); cube.vertices.push_back(p3);
-//    cube.normals.push_back(Vector3f(1.0, 0.0, 0.0));
-//    cube.normals.push_back(Vector3f(1.0, 0.0, 0.0));
-//
-//    cube.vertices.push_back(p5); cube.vertices.push_back(p6); cube.vertices.push_back(p2);
-//    cube.vertices.push_back(p2); cube.vertices.push_back(p1); cube.vertices.push_back(p5);
-//    cube.normals.push_back(Vector3f(0.0, -1.0, 0.0));
-//    cube.normals.push_back(Vector3f(0.0, -1.0, 0.0));
-//
-//    cube.vertices.push_back(p8); cube.vertices.push_back(p7); cube.vertices.push_back(p3);
-//    cube.vertices.push_back(p3); cube.vertices.push_back(p4); cube.vertices.push_back(p8);
-//    cube.normals.push_back(Vector3f(0.0, 1.0, 0.0));
-//    cube.normals.push_back(Vector3f(0.0, 1.0, 0.0));
     
     glGenVertexArrays(1, &cube.vao);
     glBindVertexArray(cube.vao);
@@ -600,13 +549,6 @@ Model loadCube(){
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
     
-    // My attempt to create a color buffer object
-//    GLuint cbo;
-//    glGenBuffers(1, &cbo);
-//    glBindBuffer(GL_ARRAY_BUFFER, cbo);
-//    glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(Vector3f), colors.data(), GL_STATIC_DRAW);
-//    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-//    glEnableVertexAttribArray(1);
     
     return cube;
     

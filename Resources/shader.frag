@@ -11,7 +11,7 @@ uniform bool turboModeOn;
 uniform vec3 viewPos;
 
 uniform struct Light {
-    vec3 position;// = vec3(0.0, 0.0, 5.0);
+    vec3 position;
     vec3 diffuseColor;
     vec3 ambientColor;
     vec3 specularColor;
@@ -20,10 +20,10 @@ uniform struct Light {
 } light;
 
 in struct Material {
-    vec3 ambientColor;// = vec3(0.1, 0.1, 0.1);
-    vec3 diffuseColor;// = vec3(0.5, 0.0, 0.0);
-    vec3 specularColor;// = vec3(1.0, 1.0, 1.0);
-    float shininess;// = 16.0;
+    vec3 ambientColor;
+    vec3 diffuseColor;
+    vec3 specularColor;
+    float shininess;
 } material;
 
 in vec3 passPosition;
@@ -62,7 +62,7 @@ float getShadowMultiplier(in vec4 fragLightCoord, in bool spotlight){
     
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
-            if(values[i][j] < fragLightDepth - 0.0001){ // is in shadow
+            if(values[i][j] < fragLightDepth - 0.00001){ // is in shadow
                 percentageShadow++;
             }
         }
@@ -130,6 +130,7 @@ void main()
             percentageShadow = 0;
             normal = -normal;
         }
+        
         texDiffuse = texture(colorMap, passTexCoord).rgb;
         finalColor = getShading(light, lightDir, normal, texDiffuse);
         

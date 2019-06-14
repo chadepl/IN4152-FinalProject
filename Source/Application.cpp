@@ -69,8 +69,7 @@ Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up)
     return lookAtMatrix * translateMatrix;
 }
 
-// Rudimentary function for drawing models, feel free to replace or change it with your own logic
-// Just make sure you let the shader know whether the model has texture coordinates
+
 void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f rotation = Vector3f(0), float scale = 1, bool spacecraft = false)
 {
     Matrix4f modelMatrix;
@@ -90,8 +89,6 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     shader.uniformMatrix4f("modelMatrix", modelMatrix);
     shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
     
-	//glActiveTexture(1);
-	//glUniform1i(0, 1);
 	if (model.texCoords.size() > 0) {
 		int nMaterial = model.materials.size();
 
@@ -106,8 +103,7 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     
 }
 
-// Rudimentary function for drawing models, feel free to replace or change it with your own logic
-// Just make sure you let the shader know whether the model has texture coordinates
+
 void drawPlanet(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f rotation = Vector3f(0), float scale = 1, Vector3f rotationPoint = Vector3f(0), float distance=1.f)
 {
 	Matrix4f modelMatrix;
@@ -140,7 +136,6 @@ void drawPlanet(ShaderProgram& shader, const Model& model, Vector3f position, Ve
 }
 
 
-
 class Application : KeyListener, MouseMoveListener, MouseClickListener
 {
 public:
@@ -163,7 +158,6 @@ public:
         
         // INIT GAME STATE
         srand(time(0));
-    
         
         // -- general game state
         
@@ -186,9 +180,6 @@ public:
         explosion.numFrames = 9;
         for (int i = explosion.firstFrame; i < explosion.numFrames + 1; ++i) {
             explosion.frames.push_back(loadModelWithMaterials("Resources/spacecraftExplosion/spacecraftExplosion_00000"+ std::to_string(i)+".obj", "Resources/spacecraftExplosion/"));
-            
-            //std::cout << "Loading obstacle: " << i << std::endl;
-            //std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
         }
         
         skybox = loadModel("Resources/skysphereblue.obj");
@@ -231,8 +222,6 @@ public:
 
         // testing models
         testingQuad = makeQuad();
-        //testingQuad_tex = loadImage("Resources/earth-square.jpg");
-        lightCube = loadCube();//loadModel("Resources/cube.obj");
         
         /////
 
@@ -307,6 +296,148 @@ public:
         
     }
     
+    void initGameState(){
+        game.characterPosition = Vector3f(0.f, 2.f, 0.f); //3.5f, 2.f, -3.f
+        cameraPos = game.characterPosition + -cameraTarget * .2f;
+        pitch = 0.f;
+        yaw = 0.f;
+        cameraTarget = Vector3f(cos(degToRad(pitch)) * cos(degToRad(yaw)), sin(degToRad(pitch)), cos(degToRad(pitch)) * sin(degToRad(yaw)));
+        cameraTarget.normalize();
+        
+        game.characterScalingFactor = .1f;
+        game.characterRoll = 0.f;
+        game.characterRollSensitivity = 0.5f;
+        game.characterTurboModeOn = false;
+        game.characterIsNotExploded = true;
+        
+        game.obstaclesSurpased = false;
+        
+        explosion.currentFrame = 1;
+        explosion.on = false;
+        
+        game.hangarPosition = Vector3f(0.f, 1.f, 0.f);
+        game.hangarScalingFactor = 1.f;
+        game.turboModeOn = false;
+        game.gameStart = false;
+        game.arcsCrossed = 0;
+        
+        if(!obstacles.empty()){
+            for (auto &obs : obstacles){
+                obs.crossed = false;
+            }
+        }else{
+            for (int i = 0; i < game.numObstacles; ++i) {
+                Obstacle newObstacle;
+                
+                float randomPositionX = rand()%(int)round(map.scale/2) - (int)round(map.scale/4);
+                float randomPositionZ = rand()%(int)round(map.scale/2) - (int)round(map.scale/4);
+                float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
+                
+                if(height <= 0) height = 10;
+                
+                newObstacle.position = Vector3f(randomPositionX, height + 10, randomPositionZ);
+                newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj", "Resources/");
+                newObstacle.scaling = 1.f;
+                newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
+                obstacles.push_back(newObstacle);
+            }
+        }
+        
+        // -- light
+        
+        light.position = Vector3f(0.f, 40.f, 40.f);
+        light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f, 2.f, 0.f), cameraUp);
+        light.projectionMatrix = projectionProjectiveMatrix(100, 1, 0.1, 100);
+        
+        // 2*(atan2(map.scale/2, (map.scale/2)+5) * 180 / M_PI)
+        
+        light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
+        light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
+        light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
+    }
+    
+    
+    // Method for updating the game state after each frame
+    void updateGameState(){
+        // Move character forward if user has pressed any key
+        if(game.gameStart && game.characterIsNotExploded)
+            game.characterPosition += cameraTarget.normalize() * movementSpeed;
+        
+        
+        // Check, for all the arcs if the spaceship has traversed them and change something if thats the case.
+        game.arcsCrossed = 0;
+        for (auto &obs : obstacles){
+            Vector3f distanceVector = (obs.position - game.characterPosition);
+            float distance = std::abs(distanceVector.length());
+            if (distance < 1) {
+                obs.crossed = true;
+            }
+            if(obs.crossed) game.arcsCrossed += 1;
+        }
+        
+        // If all arcs are crossed check distance to center of starky sphere and move light there
+        if (obstacles.size() == game.arcsCrossed) {
+            auto starskySpherePos = Vector3f(-95.f, 60.f, 140.f);
+            Vector3f v = (starskySpherePos - game.characterPosition);
+            float distance = std::abs(v.length());
+            
+            if (distance <= 75.f) {
+                light.position = starskySpherePos + Vector3f(0, 65.f, 0);
+                light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f, 2.f, 0.f), cameraUp);
+                light.projectionMatrix = projectionProjectiveMatrix(100, 1, 0.1, 100);
+                light.scale = 10.f;
+            }
+            
+            
+        }
+        
+        // add iff
+        if(obstacles.size() == game.arcsCrossed) game.obstaclesSurpased = true;
+        
+        float currentGroundHeight = getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
+        
+        if((game.characterPosition.length() > map.scale/2 && !game.obstaclesSurpased) || (game.characterPosition.y <= currentGroundHeight)){
+            
+            if(!explosion.on){
+                explosion.on = true;
+                game.characterIsNotExploded = false;
+                explosion.startTime = clock();
+            } else {
+                clock_t elapsed = clock();
+                double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
+                if (elapsed_secs > game.restartTimeSecs) {
+                    mKeyPressed.clear();
+                    initGameState();
+                }
+            }
+            
+        }
+        
+        
+        // Matrices updates
+        if (!game.cameraFirstPerson) {
+            cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f, 0))  *2.f;
+        }
+        else {
+            cameraPos = game.characterPosition + -cameraTarget * 1.f;
+        }
+        game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
+        game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2] / m_viewport[3], 0.1, map.scale);
+        
+        
+        if (game.turboModeOn){
+            movementSpeed = 0.5f;
+        } else {
+            movementSpeed = 0.05f;
+        }
+        
+        pEarth.rotationAngle += 0.1f;
+        pMars.rotationAngle += 0.05f;
+        pTest.rotationAngle += 0.01f;
+        
+    }
+
+    
 
     void update()
     {
@@ -337,7 +468,6 @@ public:
             skySphereShader.uniformMatrix4f("projMatrix", game.projMatrix);
             skySphereShader.uniformMatrix4f("viewMatrix", game.characterViewMatrix);
 
-            //std::cout << (obstacles.size() != game.arcsCrossed) << std::endl;
 			if (!game.obstaclesSurpased) { //TODO If not all arcs are crossed
 				drawModel(skySphereShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale / 2, false);
 			}
@@ -347,7 +477,7 @@ public:
 			}
 
             
-            // TESTING
+            // TESTING (ENABLE TO DRAW ON QUAD)
             
 //            testShader.bind();
 //
@@ -493,166 +623,15 @@ public:
                 drawModel(shadowShader, obs.model, obs.position, obs.rotation, obs.scaling);
             }
             
-            // 6. Draw OTHER stuff
+            // 5. Draw OTHER stuff
             
-            //drawModel(shadowShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
-            //drawModel(shadowShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
-            //drawModel(shadowShader, lightCube, Vector3f(0.f, 15.f, 0.f));
-            //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
-            //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
         }
         
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
     }
     
-    void initGameState(){
-        game.characterPosition = Vector3f(0.f, 2.f, 0.f); //3.5f, 2.f, -3.f
-        cameraPos = game.characterPosition + -cameraTarget * .2f;
-		pitch = 0.f;
-		yaw = 0.f;
-		cameraTarget = Vector3f(cos(degToRad(pitch)) * cos(degToRad(yaw)), sin(degToRad(pitch)), cos(degToRad(pitch)) * sin(degToRad(yaw)));
-		cameraTarget.normalize();
-
-        game.characterScalingFactor = .1f;
-        game.characterRoll = 0.f;
-        game.characterRollSensitivity = 0.5f;
-        game.characterTurboModeOn = false;
-        game.characterIsNotExploded = true;
-        
-        game.obstaclesSurpased = false;
-        
-        explosion.currentFrame = 1;
-        explosion.on = false;
-        
-        game.hangarPosition = Vector3f(0.f, 1.f, 0.f);
-        game.hangarScalingFactor = 1.f;
-        game.turboModeOn = false;
-        game.gameStart = false;
-		game.arcsCrossed = 0;
-        
-        if(!obstacles.empty()){
-            for (auto &obs : obstacles){
-                obs.crossed = false;
-            }
-        }else{
-            for (int i = 0; i < game.numObstacles; ++i) {
-                Obstacle newObstacle;
-                
-                float randomPositionX = rand()%(int)round(map.scale/2) - (int)round(map.scale/4);
-                float randomPositionZ = rand()%(int)round(map.scale/2) - (int)round(map.scale/4);
-                float height = getHeightMapPoint(Vector3f(randomPositionX, 0.f, randomPositionZ), map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
-                
-                if(height <= 0) height = 10;
-                
-                newObstacle.position = Vector3f(randomPositionX, height + 10, randomPositionZ);
-                newObstacle.model = loadModelWithMaterials("Resources/obstacleArcSimplified.obj", "Resources/");
-                newObstacle.scaling = 1.f;
-                newObstacle.rotation = Vector3f(0.f, 90.f, 0.f);
-                obstacles.push_back(newObstacle);
-                //std::cout << "Loading obstacle: " << i << std::endl;
-                //std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
-            }
-        }
-        
-        // -- light
-        
-        light.position = Vector3f(0.f, 40.f, 40.f);
-//        light.viewMatrix = lookAtMatrix(Vector3f(10.f, 10.f, 10.f), Vector3f(1.f, 1.f, 1.f), Vector3f(0.f, 1.f, 0.f));
-        light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f, 2.f, 0.f), cameraUp);
-        light.projectionMatrix = projectionProjectiveMatrix(100, 1, 0.1, 100);
-        
-        
-        
-        // 2*(atan2(map.scale/2, (map.scale/2)+5) * 180 / M_PI)
-        
-        light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
-        light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
-        light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
-    }
     
-    
-    // Method for updating the game state after each frame
-    void updateGameState(){
-		// Move character forward if user has pressed any key
-		if(game.gameStart && game.characterIsNotExploded)
-			game.characterPosition += cameraTarget.normalize() * movementSpeed;
-        
-        
-        // Check, for all the arcs if the spaceship has traversed them and change something if thats the case.
-        game.arcsCrossed = 0;
-        for (auto &obs : obstacles){
-            Vector3f distanceVector = (obs.position - game.characterPosition);
-            float distance = std::abs(distanceVector.length());
-			if (distance < 1) {
-				obs.crossed = true;
-			}
-            if(obs.crossed) game.arcsCrossed += 1;
-        }
-
-		// If all arcs are crossed check distance to center of starky sphere and move light there
-		if (obstacles.size() == game.arcsCrossed) {
-			auto starskySpherePos = Vector3f(-95.f, 60.f, 140.f);
-			Vector3f v = (starskySpherePos - game.characterPosition);
-			float distance = std::abs(v.length());
-			
-			if (distance <= 75.f) {
-				light.position = starskySpherePos + Vector3f(0, 65.f, 0);
-				light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f, 2.f, 0.f), cameraUp);
-				light.projectionMatrix = projectionProjectiveMatrix(100, 1, 0.1, 100);
-                light.scale = 10.f;
-			}
-
-
-		}
-        
-        // add iff
-        if(obstacles.size() == game.arcsCrossed) game.obstaclesSurpased = true;
-        
-        float currentGroundHeight = getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
-        
-        if((game.characterPosition.length() > map.scale/2 && !game.obstaclesSurpased) || (game.characterPosition.y <= currentGroundHeight)){
-
-            if(!explosion.on){
-                explosion.on = true;
-                game.characterIsNotExploded = false;
-                explosion.startTime = clock();
-            } else {
-                clock_t elapsed = clock();
-                double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
-                //std::cout << "Elapsed: " << elapsed_secs << std::endl;
-                if (elapsed_secs > game.restartTimeSecs) {
-                    mKeyPressed.clear();
-                    initGameState();
-                }
-            }
-
-        }
-
-        
-        // Matrices updates
-		if (!game.cameraFirstPerson) {
-			cameraPos = game.characterPosition + -(cameraTarget + Vector3f(0, -0.5f, 0))  *2.f;
-		}
-		else {
-			cameraPos = game.characterPosition + -cameraTarget * 1.f;
-		}
-		game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
-		game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2] / m_viewport[3], 0.1, map.scale);
-        
-        
-        if (game.turboModeOn){
-            movementSpeed = 0.5f;
-        } else {
-            movementSpeed = 0.05f;
-        }
-        
-        pEarth.rotationAngle += 0.1f;
-        pMars.rotationAngle += 0.05f;
-        pTest.rotationAngle += 0.01f;
-        
-    }
-
 	// Apply camera transformations according to keyboard input
 	void processKeyboardInput() {
 		if (mKeyPressed.empty()) {
@@ -665,25 +644,16 @@ public:
         if(game.characterIsNotExploded){
             if (mKeyPressed[GLFW_KEY_W]) {
                 // Move forward using unit direction vector
-                //cameraPos += cameraTarget.normalize() * movementSpeed;
                 game.characterPosition += cameraTarget.normalize() * movementSpeed;
-				
-                //std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
             }
             if (mKeyPressed[GLFW_KEY_S]) {
                 // Move backward using unit direction vector
                 game.characterPosition -= cameraTarget.normalize() * movementSpeed;
-                // cameraPos -= cameraTarget.normalize() * movementSpeed;
-                //std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
             }
             if (mKeyPressed[GLFW_KEY_A]) {
-                // cameraPos -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
-                //game.characterPosition -= normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
                 game.characterRoll -= 1.f;
             }
             if (mKeyPressed[GLFW_KEY_D]) {
-                //game.characterPosition += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
-                // cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
                 game.characterRoll += 1.f;
             }
             if(!mKeyPressed[GLFW_KEY_A] && !mKeyPressed[GLFW_KEY_D]){
@@ -691,11 +661,9 @@ public:
             }
             if (mKeyPressed[GLFW_KEY_T]) {
                 game.turboModeOn = true;
-                // cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
             }
 			if (mKeyPressed[GLFW_KEY_N]) {
 				game.turboModeOn = false;
-				// cameraPos += normalize(cross(cameraTarget, cameraUp)) * movementSpeed;
 			}
 			if (mKeyPressed[GLFW_KEY_1]) {
 				game.cameraFirstPerson = true;
@@ -703,7 +671,6 @@ public:
 			if (mKeyPressed[GLFW_KEY_3]) {
 				game.cameraFirstPerson = false;
 			}
-            //std::cout << "Camera pos x: " << cameraPos.x << cameraPos.y << cameraPos.z << std::endl;
         }
 
 
@@ -799,8 +766,8 @@ private:
         bool characterIsNotExploded = true;
         
         bool obstaclesSurpased = false;
-        int numObstacles = 1;
-        int restartTimeSecs = 3;
+        int numObstacles = 3;
+        int restartTimeSecs = 2;
         
         Vector3f hangarPosition;
         float hangarScalingFactor;
@@ -852,8 +819,6 @@ private:
     };
     
     Animation explosion;
-    
-    
     
     // Light
     struct Light {
