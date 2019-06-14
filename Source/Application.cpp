@@ -206,6 +206,9 @@ public:
 		pinkplanet = loadModelWithMaterials("Resources/pink.obj", "Resources/");
 		pink_texture = loadImage("Resources/" + pinkplanet.materials[0].diffuse_texname);
 
+		sun = loadModel("Resources/sun.obj");
+		sun_texture = loadImage("Resources/" + sun.materials[0].diffuse_texname);
+
 		pEarth.position = Vector3f(0.f, 30.f, 0.f);
 		pEarth.rotationAngle = 0.f;
 		pMars.position = Vector3f(20.f, 30.f, 2.f);
@@ -220,6 +223,7 @@ public:
 		textureHandles.insert(std::pair<std::string, int>(hangar.materials[0].diffuse_texname, hangar_roof.handle));
 		textureHandles.insert(std::pair<std::string, int>(mars.materials[0].diffuse_texname, mars_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(pinkplanet.materials[0].diffuse_texname, pink_texture.handle));
+		textureHandles.insert(std::pair<std::string, int>(sun.materials[0].diffuse_texname, sun_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(skybox.materials[0].diffuse_texname, skybox_texture.handle));
 		textureHandles.insert(std::pair<std::string, int>(skyboxBH.materials[0].diffuse_texname, skybox_BH_texture.handle));
 
@@ -462,8 +466,12 @@ public:
                     explosion.currentFrame++;
             }
             
-            defaultShader.uniform1i("forTesting", true); // REMOVE at the end
-            drawModel(defaultShader, lightCube, light.position);
+			// Draw Sun as light in solar system
+			if (game.obstaclesSurpased) {
+				drawModel(defaultShader, sun , light.position);
+			} else {
+				drawModel(defaultShader, lightCube, light.position);
+			}
             
         }
         
@@ -586,9 +594,9 @@ public:
 			auto starskySpherePos = Vector3f(-95.f, 60.f, 140.f);
 			Vector3f v = (starskySpherePos - game.characterPosition);
 			float distance = std::abs(v.length());
-			std::cout << distance << std::endl;
+			
 			if (distance <= 75.f) {
-				light.position = starskySpherePos + Vector3f(0, 25, 0);
+				light.position = starskySpherePos + Vector3f(0, 65.f, 0);
 				light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f, 2.f, 0.f), cameraUp);
 				light.projectionMatrix = projectionProjectiveMatrix(100, 1, 0.1, 100);
 			}
@@ -657,7 +665,7 @@ public:
                 // Move forward using unit direction vector
                 //cameraPos += cameraTarget.normalize() * movementSpeed;
                 game.characterPosition += cameraTarget.normalize() * movementSpeed;
-				std::cout << game.characterPosition << std::endl;
+				
                 //std::cout << "X: " << cameraPos.x << " Y: " << cameraPos.y << " Z: " << cameraPos.z << std::endl;
             }
             if (mKeyPressed[GLFW_KEY_S]) {
@@ -789,7 +797,7 @@ private:
         bool characterIsNotExploded = true;
         
         bool obstaclesSurpased = false;
-        int numObstacles = 1;
+        int numObstacles = 6;
         int restartTimeSecs = 3;
         
         Vector3f hangarPosition;
@@ -883,6 +891,7 @@ private:
 	Model earth;
 	Model mars;
 	Model pinkplanet;
+	Model sun;
 	Model hangar;
 	Model spacecraft;
 	Model skybox;
@@ -896,6 +905,7 @@ private:
 	Image earth_texture;
 	Image mars_texture;
 	Image pink_texture;
+	Image sun_texture;
 	Image hangar_roof;
 	Image skybox_texture;
 	Image skybox_BH_texture;
