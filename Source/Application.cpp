@@ -526,7 +526,7 @@ public:
                 obs.crossed = false;
             }
         }else{
-            for (int i = 0; i < 10; ++i) {
+            for (int i = 0; i < 0; ++i) {
                 Obstacle newObstacle;
                 
                 float randomPositionX = rand()%(int)round(map.scale) - (int)round(map.scale/2);
@@ -577,6 +577,21 @@ public:
 			}
             if(obs.crossed) game.arcsCrossed += 1;
         }
+
+		// If all arcs are crossed check distance to center of starky sphere and move light there
+		if (obstacles.size() == game.arcsCrossed) {
+			auto starskySpherePos = Vector3f(-95.f, 60.f, 140.f);
+			Vector3f v = (starskySpherePos - game.characterPosition);
+			float distance = std::abs(v.length());
+			std::cout << distance << std::endl;
+			if (distance <= 75.f) {
+				light.position = starskySpherePos + Vector3f(0, 25, 0);
+				light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f, 2.f, 0.f), cameraUp);
+				light.projectionMatrix = projectionProjectiveMatrix(100, 1, 0.1, 100);
+			}
+
+
+		}
         
         float currentGroundHeight = getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
         
