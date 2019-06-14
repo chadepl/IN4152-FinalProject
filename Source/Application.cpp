@@ -163,16 +163,7 @@ public:
         
         // INIT GAME STATE
         srand(time(0));
-        
-        // -- light
-        
-        light.position = Vector3f(0.f, 10.f, 0.f);
-        light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f), Vector3f(0.f, 1.f, 0.f));
-        light.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
-        
-        light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
-        light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
-        light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
+    
         
         // -- general game state
         
@@ -255,9 +246,6 @@ public:
             shadowShader.addShader(VERTEX, "Resources/shadow.vert");
             shadowShader.addShader(FRAGMENT, "Resources/shadow.frag");
             shadowShader.build();
-
-            // Any new shaders can be added below in similar fashion
-            // ....
             
             skySphereShader.create();
             skySphereShader.addShader(VERTEX, "Resources/shaderSkySphere.vert");
@@ -287,6 +275,7 @@ public:
         //////////////////// SHADOW MAP
         //// Create Shadow Texture
         glGenTextures(1, &texShadow);
+        glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texShadow);
         
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
@@ -329,7 +318,6 @@ public:
             // SHADOWS
             drawScene(true);
             
-            
             glClearColor(0.f, 1.f, 0.f, 1.f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             
@@ -338,19 +326,13 @@ public:
             
             // SKY SPHERES
             skySphereShader.bind();
+            
             glfwGetFramebufferSize(window.windowPointer(), &framebufferWidth, &framebufferHeight);
-            std::cout << "FRAME BUFFER SIZE: " << framebufferWidth << std::endl;
-            #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-            glViewport(0, 0, WIDTH, HEIGHT);
-            #else
-            glViewport(0, 0, WIDTH * 2, HEIGHT * 2);
-            #endif
+            glViewport(0, 0, framebufferWidth, framebufferHeight);
             
             skySphereShader.uniformMatrix4f("projMatrix", game.projMatrix);
             skySphereShader.uniformMatrix4f("viewMatrix", game.characterViewMatrix);
 
-            std::cout << game.arcsCrossed << std::endl;
-            
             //std::cout << (obstacles.size() != game.arcsCrossed) << std::endl;
 			if (obstacles.size() != game.arcsCrossed) { //TODO If not all arcs are crossed
 				drawModel(skySphereShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale / 2, false);
@@ -364,10 +346,15 @@ public:
             // TESTING
             
 //            testShader.bind();
-//            glViewport(0, 0, WIDTH * 2, HEIGHT *2);
-//            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+//
+//            glfwGetFramebufferSize(window.windowPointer(), &framebufferWidth, &framebufferHeight);
+//            glViewport(0, 0, framebufferWidth, framebufferHeight);
+//
+//            glClearColor(1.f, 0.f, 0.f, 1.0f);
 //            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 //
+//            glActiveTexture(GL_TEXTURE1);
+//            glBindTexture(GL_TEXTURE_2D, texShadow);
 //            testShader.uniform1i("texShadow", 1);
 //
 //            Model quad = makeQuad();
@@ -385,12 +372,10 @@ public:
         
         if(!forComputingShadows){
             defaultShader.bind();
-			#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-			glViewport(0, 0, WIDTH, HEIGHT);
-			#else
-			glViewport(0, 0, WIDTH * 2, HEIGHT * 2);
-			#endif
-
+			
+            glfwGetFramebufferSize(window.windowPointer(), &framebufferWidth, &framebufferHeight);
+            glViewport(0, 0, WIDTH, HEIGHT);
+            glViewport(0, 0, framebufferWidth, framebufferHeight);
             
             // Bind the shadow map to texture slot 0            
             glActiveTexture(GL_TEXTURE1);
@@ -406,7 +391,6 @@ public:
             defaultShader.uniform3f("light.ambientColor", light.ambientColor);
             defaultShader.uniform3f("light.diffuseColor", light.diffuseColor);
             defaultShader.uniform3f("light.specularColor", light.specularColor);
-            defaultShader.uniform1f("light.lightPower", light.power);
             
             defaultShader.uniform3f("viewPos", cameraPos);
             defaultShader.uniform1i("turboModeOn", game.turboModeOn);
@@ -427,18 +411,17 @@ public:
             
             shadowShader.uniformMatrix4f("projMatrix", light.projectionMatrix);
             shadowShader.uniformMatrix4f("viewMatrix", light.viewMatrix);
-            shadowShader.uniform3f("viewPos", light.position);
             
         }
         
         if(!forComputingShadows){
             // 1. Draw map
             defaultShader.uniform1i("forTesting", false); // REMOVE at the end
-            drawModel(defaultShader, map.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+            drawModel(defaultShader, map.model, Vector3f(0.f), Vector3f(0.f), 1.f);
             
             updateMapValues(ocean.model);
             defaultShader.uniform1i("forTesting", false); // REMOVE at the end
-            drawModel(defaultShader, ocean.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+            drawModel(defaultShader, ocean.model, Vector3f(0.f), Vector3f(0.f), 1.f);
             
             
             // 2. Draw hangar
@@ -452,16 +435,7 @@ public:
                 drawModel(defaultShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
             }
             
-            // 4. Draw moving planets
-            drawModel(defaultShader, earth, pEarth.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle, 0), 4.f);
-            drawPlanet(defaultShader, mars, pMars.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position + Vector3f(-95.f, 60.f, 140.f), 25.f);
-			float newX = 25.f * cos(degToRad(pEarth.rotationAngle)) + pEarth.position.x;
-			float newZ = 25.f * sin(degToRad(pEarth.rotationAngle)) + pEarth.position.z;
-			pMars.position = Vector3f(newX, 60.f, newZ);
-			drawPlanet(defaultShader, pinkplanet, pTest.position + Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pTest.rotationAngle * 10 , 0), 1.5f, pMars.position + Vector3f(-95.f, 60.f, 140.f), 12.f);
-
-
-            // 5. Draw arcs
+            // 4. Draw arcs
             for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
                 Obstacle obs = *it;
                 if(obs.crossed) defaultShader.uniform1i("forTesting", true); // REMOVE at the end
@@ -469,13 +443,17 @@ public:
                 drawModel(defaultShader, obs.model, obs.position, obs.rotation, obs.scaling);
             }
             
-            // 6. Skyboxes
+            // 5. Draw moving planets
+            drawModel(defaultShader, earth, pEarth.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle, 0), 4.f);
+//            drawPlanet(defaultShader, mars, pMars.position+ Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pEarth.rotationAngle * 5, 0), 5.f, pEarth.position + Vector3f(-95.f, 60.f, 140.f), 25.f);
             
-            //defaultShader.uniform1i("forTesting", 0); // REMOVE at the end
-            //drawModel(defaultShader, skybox, Vector3f(0.f), Vector3f(0.f), map.scale/2);
+			float newX = 25.f * cos(degToRad(pEarth.rotationAngle)) + pEarth.position.x;
+			float newZ = 25.f * sin(degToRad(pEarth.rotationAngle)) + pEarth.position.z;
+			pMars.position = Vector3f(newX, 60.f, newZ);
+//            drawPlanet(defaultShader, pinkplanet, pTest.position + Vector3f(-95.f, 60.f, 140.f), Vector3f(0, pTest.rotationAngle * 10 , 0), 1.5f, pMars.position + Vector3f(-95.f, 60.f, 140.f), 12.f);
             
             
-            // 7. Draw OTHER stuff
+            // 6. Draw OTHER stuff
                 //drawModel(defaultShader, testingQuad, Vector3f(0, 5, 0));
             if(explosion.on){
                 drawModel(defaultShader, explosion.frames[explosion.currentFrame], game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
@@ -483,34 +461,25 @@ public:
                     explosion.currentFrame++;
             }
             
-
-            defaultShader.uniform1i("forTesting", false); // REMOVE at the end
-            //drawModel(defaultShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
-            
-            defaultShader.uniform1i("forTesting", true); // REMOVE at the end
-            //drawModel(defaultShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
-            
             defaultShader.uniform1i("forTesting", true); // REMOVE at the end
             drawModel(defaultShader, lightCube, light.position);
             
-            //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
-            //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
         }
         
         if(forComputingShadows){
             
             // 1. Draw map
-            drawModel(shadowShader, map.model, Vector3f(-0.5f, 0.f, 0.f),Vector3f(rotateAngle, rotateAngle*2, rotateAngle * 0.8), 1.f);
+            drawModel(shadowShader, map.model, Vector3f(0.f), Vector3f(0.f), 1.f);
+            drawModel(shadowShader, ocean.model, Vector3f(0.f), Vector3f(0.f), 1.f);
             
             // 2. Draw hangar
             drawModel(shadowShader, hangar, game.hangarPosition, Vector3f(0, 0, 0), game.hangarScalingFactor);            
             
             // 3. Draw spacecraft
-            drawModel(shadowShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f, game.characterRoll), game.characterScalingFactor, true);
+            drawModel(shadowShader, spacecraft, game.characterPosition, Vector3f(-pitch, -yaw + 90.f,game.characterRoll), game.characterScalingFactor, true);
+        
             
-            // 4. Draw moving planets
-            
-            // 5. Draw arcs
+            // 4. Draw arcs
             for (std::vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it){
                 Obstacle obs = *it;
                 drawModel(shadowShader, obs.model, obs.position, obs.rotation, obs.scaling);
@@ -519,11 +488,8 @@ public:
             // 6. Draw OTHER stuff
             
             //drawModel(shadowShader, arcTest, Vector3f(0.f, 10.f, 5.f), Vector3f(0.f,0.f,0.f), 1);
-            
             //drawModel(shadowShader, lightCube, light.position, Vector3f(0.f,0.f,0.f), 0.5);
-            
             //drawModel(shadowShader, lightCube, Vector3f(0.f, 15.f, 0.f));
-            
             //drawModel(defaultShader, dragon, Vector3f(0.f, 0.f, 0.f));
             //drawModel(defaultShader, davidHead, Vector3f(0.f, 0.f, 0.f));
         }
@@ -576,6 +542,21 @@ public:
                 //std::cout << "Position: (" << newObstacle.position.x << ", " << newObstacle.position.y << ", " << newObstacle.position.z << ")" << std::endl;
             }
         }
+        
+        // -- light
+        
+        light.position = Vector3f(0.f, 40.f, 40.f);
+//        light.viewMatrix = lookAtMatrix(Vector3f(10.f, 10.f, 10.f), Vector3f(1.f, 1.f, 1.f), Vector3f(0.f, 1.f, 0.f));
+        light.viewMatrix = lookAtMatrix(light.position, Vector3f(0.f, 2.f, 0.f), cameraUp);
+        light.projectionMatrix = projectionProjectiveMatrix(100, 1, 0.1, 100);
+        
+        
+        
+        // 2*(atan2(map.scale/2, (map.scale/2)+5) * 180 / M_PI)
+        
+        light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
+        light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
+        light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
     }
     
     
@@ -585,28 +566,8 @@ public:
 		if(game.gameStart && game.characterIsNotExploded)
 			game.characterPosition += cameraTarget.normalize() * movementSpeed;
         
-        float currentGroundHeight = getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
         
-        // check collisions with ceiling and floor
-    //    if(game.characterPosition.length() > map.scale/2 || game.characterPosition.y <= currentGroundHeight){
-    //        
-    //        if(!explosion.on){
-    //            explosion.on = true;
-    //            game.characterIsNotExploded = false;
-    //            explosion.startTime = clock();
-    //        } else {
-    //            clock_t elapsed = clock();
-    //            double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
-    //            //std::cout << "Elapsed: " << elapsed_secs << std::endl;
-				//if (elapsed_secs > 10) {
-				//	mKeyPressed.clear();
-				//	initGameState();
-				//}
-    //        }
-    //        
-    //    }
-        
-        // check if has crosed and arc
+        // Check, for all the arcs if the spaceship has traversed them and change something if thats the case.
         game.arcsCrossed = 0;
         for (auto &obs : obstacles){
             Vector3f distanceVector = (obs.position - game.characterPosition);
@@ -617,7 +578,26 @@ public:
             if(obs.crossed) game.arcsCrossed += 1;
         }
         
+        float currentGroundHeight = getHeightMapPoint(game.characterPosition, map.perlinGenerator, map.perlinSize, map.scale, map.heightMult);
         
+//        if(game.characterPosition.length() > map.scale/2 || game.characterPosition.y <= currentGroundHeight){
+//
+//            if(!explosion.on){
+//                explosion.on = true;
+//                game.characterIsNotExploded = false;
+//                explosion.startTime = clock();
+//            } else {
+//                clock_t elapsed = clock();
+//                double elapsed_secs = double(elapsed - explosion.startTime) / CLOCKS_PER_SEC;
+//                //std::cout << "Elapsed: " << elapsed_secs << std::endl;
+//                if (elapsed_secs > 10) {
+//                    mKeyPressed.clear();
+//                    initGameState();
+//                }
+//            }
+//
+//        }
+//
         
         // Matrices updates
 		if (!game.cameraFirstPerson) {
@@ -628,17 +608,7 @@ public:
 		}
 		game.characterViewMatrix = lookAtMatrix(cameraPos, game.characterPosition, cameraUp); // depends on processKeyboardInput();
 		game.projMatrix = projectionProjectiveMatrix(45, m_viewport[2] / m_viewport[3], 0.1, map.scale);
-
         
-        // Light updates
-        
-        light.position = Vector3f(3.f, 40.f, 8.f);
-        light.viewMatrix = lookAtMatrix(light.position, game.characterPosition, Vector3f(0.f, 1.f, 0.f));
-        light.projectionMatrix = projectionProjectiveMatrix(60, 1, 0.1, 100);
-        
-        light.ambientColor = Vector3f(0.2f, 0.2f, 0.2f);
-        light.diffuseColor = Vector3f(0.5f, 0.5f, 0.5f);
-        light.specularColor = Vector3f(1.0f, 1.0f, 1.0f);
         
         if (game.turboModeOn){
             movementSpeed = 0.5f;
@@ -649,10 +619,6 @@ public:
         pEarth.rotationAngle += 0.1f;
         pMars.rotationAngle += 0.05f;
         pTest.rotationAngle += 0.01f;
-        
-        // Check, for all the arcs if the spaceship has traversed them and change something if thats the case.
-        
-        
         
     }
 
@@ -862,7 +828,6 @@ private:
         Vector3f ambientColor;
         Vector3f diffuseColor;
         Vector3f specularColor;
-        float power;
     } light;
 
     // Shader for default rendering and for depth rendering

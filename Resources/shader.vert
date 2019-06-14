@@ -6,7 +6,7 @@ uniform mat4 projMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 modelMatrix;
 
-layout(location = 0) in vec4 position;
+layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec3 diffuseColor;
 layout(location = 3) in vec3 ambientColor;
@@ -29,9 +29,9 @@ out struct Material {
 
 void main()
 {
-    gl_Position = projMatrix * viewMatrix * modelMatrix * position;
+    gl_Position = projMatrix * viewMatrix * modelMatrix * vec4(position, 1.f);
     
-    passPosition = (modelMatrix * position).xyz;
+    passPosition = (modelMatrix * vec4(position, 1.f)).xyz;
     passNormal = (modelMatrix * vec4(normal, 0)).xyz;
     passTexCoord = texCoord;
     

@@ -16,7 +16,6 @@ uniform struct Light {
     vec3 specularColor;
     mat4 projectionMatrix;
     mat4 viewMatrix;
-    float lightPower;// = 20.0;
 } light;
 
 in struct Material {
