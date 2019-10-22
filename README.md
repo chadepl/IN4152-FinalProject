@@ -26,8 +26,8 @@ Third person camera:
 
 Phong:
 
-![](images/phong-shading.png | width=100)
+![](images/phong-shading.png)
 
 Toon:
 
-![](images/toon-shading.png | width=100)
+![](images/toon-shading.png)
