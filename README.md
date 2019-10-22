@@ -11,18 +11,23 @@ This is the final project for the course IN4152 Computer Graphics at TU Delft. I
 ### Cameras 
 
 First person camera:
+
 ![](images/first-person.png)
 
 Third person camera:
+
 ![](images/third-person.png)
 
 ### Procedurally generated terrain
+
 ![](images/procedural-terrain.png)
 
 ### Shading
 
 Phong:
-![](images/phong-shading.png)
+
+![](images/phong-shading.png =250x)
 
 Toon:
-![](images/toon-shading.png)
+
+![](images/toon-shading.png =250x)
